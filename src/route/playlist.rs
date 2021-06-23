@@ -1,41 +1,23 @@
 use crate::{
-    route::utils,
-    schema::{
-        playlist::{Playlist, PlaylistJson, PlaylistRequest, Track, TrackRequest},
-        ApiResponse,
-    },
+    database::playlist::{PlaylistManager, TrackManager},
+    schema::{ApiResponse, PlaylistRequest, TrackRequest},
 };
 use actix_web::{web, HttpResponse, Responder};
-use futures::StreamExt;
 use mongodb::{
-    bson::{doc, from_document, oid::ObjectId, to_document, Document},
-    error::Error,
-    options::{FindOneAndUpdateOptions, ReturnDocument},
-    results::UpdateResult,
+    bson::{self, oid::ObjectId},
     Client,
 };
-use serde_json::Value;
 
 const DB: &str = "tiplouf";
 const COLLECTION: &str = "playlist";
 
 //get /playlist/
 pub async fn get_all(client: web::Data<Client>) -> impl Responder {
-    let collection = client.database(DB).collection(COLLECTION);
-    let collection = collection.find(None, None).await.unwrap();
+    let manager = PlaylistManager::init(client.database(DB).collection(COLLECTION));
 
-    let collection = collection.collect::<Vec<Result<Document, Error>>>().await;
+    let res = manager.get_all().await;
 
-    let collection: Vec<PlaylistJson> = collection
-        .iter()
-        .map(|document| {
-            let document = document.clone().unwrap();
-
-            from_document::<Playlist>(document).unwrap().get_json()
-        })
-        .collect();
-
-    HttpResponse::Ok().json(collection)
+    HttpResponse::Ok().json(ApiResponse::success(res))
 }
 
 //post /playlist/
@@ -43,103 +25,79 @@ pub async fn create_one(
     client: web::Data<Client>,
     req_body: web::Json<PlaylistRequest>,
 ) -> impl Responder {
-    let collection = client.database(DB).collection(COLLECTION);
+    let manager = PlaylistManager::init(client.database(DB).collection(COLLECTION));
     let playlist = req_body.0.draft();
 
-    let id = collection
-        .insert_one(playlist.get_doc(), None)
-        .await
-        .unwrap()
-        .inserted_id;
-    let id = id.as_object_id().unwrap().to_string();
+    let res = manager.create_one(playlist).await;
 
-    let response = ApiResponse {
-        status: "success",
-        data: playlist.get_json(id),
-    };
-
-    HttpResponse::Ok().json(response)
+    HttpResponse::Ok().json(ApiResponse::success(res))
 }
 
+//delete /playlist/{id}
 pub async fn delete_one(
     client: web::Data<Client>,
     web::Path(id): web::Path<String>,
 ) -> impl Responder {
-    let playlist_collection = client.database(DB).collection(COLLECTION);
-
     let id = ObjectId::with_string(&id).unwrap();
+    let manager = PlaylistManager::init(client.database(DB).collection(COLLECTION));
 
-    let deleted_playlist = playlist_collection
-        .find_one_and_delete(doc! { "_id": id}, None)
-        .await
-        .unwrap();
-
-    let response = ApiResponse {
+    let res = ApiResponse {
         status: "success",
-        data: from_document::<Playlist>(deleted_playlist.unwrap())
-            .unwrap()
-            .get_json(),
+        data: manager.delete_one(id).await,
     };
 
-    HttpResponse::Ok().json(response)
+    HttpResponse::Ok().json(res)
 }
 
+//get /playlist/{id}
 pub async fn get_one(
     client: web::Data<Client>,
     web::Path(id): web::Path<String>,
 ) -> impl Responder {
-    let collection = client.database(DB).collection(COLLECTION);
     let id = ObjectId::with_string(&id).unwrap();
+    let manager = PlaylistManager::init(client.database(DB).collection(COLLECTION));
 
-    let playlist = collection.find_one(doc! { "_id": id}, None).await.unwrap();
+    let playlist = manager.get_one(id).await;
 
     let response = ApiResponse {
         status: "success",
-        data: from_document::<Playlist>(playlist.unwrap())
-            .unwrap()
-            .get_json(),
+        data: playlist,
     };
 
     HttpResponse::Ok().json(response)
 }
 
+//post /playlist/{id}/track
 pub async fn add_track(
     client: web::Data<Client>,
     web::Path(id): web::Path<String>,
     req_body: web::Json<TrackRequest>,
 ) -> impl Responder {
-    let collection = client.database(DB).collection(COLLECTION);
     let id = ObjectId::with_string(&id).unwrap();
-    let track = to_document(&req_body.0.complete()).unwrap();
+    let track = bson::to_document(&req_body.0.complete()).unwrap();
+    let manager = TrackManager::init(client.database(DB).collection(COLLECTION), id);
 
     //add track inside tracklist field
-    let add_track = doc! {"$push": {"tracklist": track}, "$inc": {"trackcount": 1}};
-    let filter = doc! {"_id": id};
+    let result = manager.add_one(track).await;
 
-    let result = collection
-        .update_one(filter.clone(), add_track, None)
-        .await
-        .unwrap();
-
-    utils::parse_playlist_update(result, collection, filter).await
+    match result {
+        Ok(playlist) => HttpResponse::Ok().json(ApiResponse::fail(playlist)),
+        Err(e) => HttpResponse::InternalServerError().json(ApiResponse::fail(e.labels())),
+    }
 }
 
 pub async fn remove_track(
     client: web::Data<Client>,
     web::Path((id, track_id)): web::Path<(String, String)>,
 ) -> impl Responder {
-    let collection = client.database(DB).collection(COLLECTION);
     let id = ObjectId::with_string(&id).unwrap();
     let track_id = ObjectId::with_string(&track_id).unwrap();
+    let manager = TrackManager::init(client.database(DB).collection(COLLECTION), id);
 
-    //delete track inside tracklist field
-    let filter = doc! {"_id": id};
-    let remove_track = doc! {"$pull": {"tracklist": { "track_id": {"$eq": track_id}}}};
+    let result = manager.remove_one(track_id).await;
 
-    let result = collection
-        .update_one(filter.clone(), remove_track, None)
-        .await
-        .unwrap();
-
-    utils::parse_playlist_update(result, collection, filter).await
+    match result {
+        Ok(playlist) => HttpResponse::Ok().json(ApiResponse::fail(playlist)),
+        Err(e) => HttpResponse::InternalServerError().json(ApiResponse::fail(e.labels())),
+    }
 }

@@ -1,5 +1,4 @@
 mod playlist;
-mod utils;
 
 use actix_web::{web, HttpResponse, Responder};
 
