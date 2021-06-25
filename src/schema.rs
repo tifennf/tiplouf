@@ -6,25 +6,56 @@ use serde::{Deserialize, Serialize};
 use crate::database::playlist::{PlaylistDraft, Track};
 
 #[derive(Serialize)]
-pub struct ApiResponse<'a, T> {
-    pub status: &'a str,
-    pub data: T,
+pub struct ApiResponse {}
+
+impl ApiResponse {
+    pub fn success<T>(data: T) -> ApiSuccess<T> {
+        ApiSuccess {
+            status: "success".to_string(),
+            data,
+        }
+    }
+
+    pub fn fail<T>(data: T) -> ApiFail<T> {
+        ApiFail {
+            status: "fail".to_string(),
+            data,
+        }
+    }
 }
 
-impl<'a, T> ApiResponse<'a, T> {
-    pub fn success(data: T) -> ApiResponse<'a, T> {
-        ApiResponse {
-            status: "success",
-            data,
-        }
-    }
+// #[derive(Serialize)]
+// pub struct ApiResponse<T> {
+//     status: String,
+//     data: T,
+// }
 
-    pub fn fail(data: T) -> ApiResponse<'a, T> {
-        ApiResponse {
-            status: "fail",
-            data,
-        }
-    }
+// impl<T> ApiResponse<T> {
+//     pub fn success(data: T) -> ApiResponse<T> {
+//         ApiResponse {
+//             status: "success".to_string(),
+//             data,
+//         }
+//     }
+
+//     pub fn fail(data: T) -> ApiResponse<T> {
+//         ApiResponse {
+//             status: "fail".to_string(),
+//             data,
+//         }
+//     }
+// }
+
+#[derive(Serialize)]
+pub struct ApiSuccess<T> {
+    status: String,
+    data: T,
+}
+
+#[derive(Serialize)]
+pub struct ApiFail<T> {
+    status: String,
+    data: T,
 }
 
 #[derive(Serialize, Deserialize, Debug)]

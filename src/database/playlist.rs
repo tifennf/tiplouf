@@ -1,6 +1,7 @@
-use futures::StreamExt;
+use futures::TryStreamExt;
 use mongodb::{
     bson::{self, doc, oid::ObjectId, Document},
+    error,
     options::{FindOneAndUpdateOptions, ReturnDocument},
     Collection,
 };
@@ -102,60 +103,62 @@ impl PlaylistManager {
     }
 
     //need fix about cursor
-    pub async fn get_all(&self) -> Vec<PlaylistJson> {
+    pub async fn get_all(&self) -> Result<Vec<PlaylistJson>, error::Error> {
         let collection = self.collection.find(None, None).await.unwrap();
-
-        let collection = collection
-            .collect::<Vec<Result<Document, mongodb::error::Error>>>()
-            .await;
+        let collection = collection.try_collect::<Vec<Document>>().await?;
 
         //convert vec into a different one
-        collection
+        let result = collection
             .iter()
             .map(|document| {
-                let document = document.clone().unwrap();
+                let document = document.clone();
 
-                bson::from_document::<Playlist>(document)
+                //only way to fail is if collection is corrupt, anyway i dunno how to handle that from doc in closure
+                let result = bson::from_document::<Playlist>(document)
                     .unwrap()
-                    .get_json()
+                    .get_json();
+
+                result
             })
-            .collect::<Vec<PlaylistJson>>()
+            .collect::<Vec<PlaylistJson>>();
+
+        Ok(result)
     }
 
-    pub async fn create_one(&self, playlist: PlaylistDraft) -> PlaylistJson {
+    pub async fn create_one(&self, playlist: PlaylistDraft) -> Result<PlaylistJson, error::Error> {
         let id = self
             .collection
             .insert_one(playlist.get_doc(), None)
-            .await
-            .unwrap()
+            .await?
             .inserted_id;
 
-        let id = id.as_object_id().unwrap().to_string();
-        playlist.get_json(id)
+        let id = id.as_object_id().map(|id| id.to_string());
+
+        let id = match id {
+            Some(id) => id,
+            None => {
+                let error = crate::error::no_id();
+
+                return Err(error::Error::from(error));
+            }
+        };
+
+        Ok(playlist.get_json(id))
     }
 
-    pub async fn delete_one(&self, id: ObjectId) -> PlaylistJson {
-        let deleted_playlist = self
+    pub async fn delete_one(&self, id: ObjectId) -> Result<PlaylistJson, error::Error> {
+        let result = self
             .collection
             .find_one_and_delete(doc! { "_id": id }, None)
-            .await
-            .unwrap();
+            .await?;
 
-        bson::from_document::<Playlist>(deleted_playlist.unwrap())
-            .unwrap()
-            .get_json()
+        parse_playlist(result)
     }
 
-    pub async fn get_one(&self, id: ObjectId) -> PlaylistJson {
-        let playlist = self
-            .collection
-            .find_one(doc! { "_id": id}, None)
-            .await
-            .unwrap();
+    pub async fn get_one(&self, id: ObjectId) -> Result<PlaylistJson, error::Error> {
+        let result = self.collection.find_one(doc! { "_id": id}, None).await?;
 
-        bson::from_document::<Playlist>(playlist.unwrap())
-            .unwrap()
-            .get_json()
+        parse_playlist(result)
     }
 }
 
@@ -190,8 +193,9 @@ impl TrackManager {
         self.collection
             .update_one(filter.clone(), add_track, None)
             .await?;
+        let result = self.tracklist_update(increase_count).await?;
 
-        Ok(self.tracklist_update(increase_count).await)
+        parse_playlist(result)
     }
 
     pub async fn remove_one(
@@ -217,26 +221,39 @@ impl TrackManager {
         self.collection
             .update_one(filter, remove_track, None)
             .await?;
+        let result = self.tracklist_update(decrease_count).await?;
 
-        Ok(self.tracklist_update(decrease_count).await)
+        parse_playlist(result)
     }
 
     //return playlist with updated tracklist and count
-    async fn tracklist_update(&self, count_update: Document) -> PlaylistJson {
+    async fn tracklist_update(
+        &self,
+        count_update: Document,
+    ) -> Result<Option<Document>, mongodb::error::Error> {
         let filter = doc! { "_id": self.playlist_id.clone() };
         let option = FindOneAndUpdateOptions::builder()
             .return_document(ReturnDocument::After)
             .build();
 
-        let playlist = self
+        let result = self
             .collection
             .find_one_and_update(filter, count_update, option)
-            .await
-            .unwrap()
-            .unwrap();
+            .await?;
 
-        bson::from_document::<Playlist>(playlist)
-            .unwrap()
-            .get_json()
+        Ok(result)
     }
+}
+
+fn parse_playlist(result: Option<Document>) -> Result<PlaylistJson, mongodb::error::Error> {
+    let playlist = match result {
+        Some(playlist) => bson::from_document::<Playlist>(playlist)?.get_json(),
+        None => {
+            let error = crate::error::no_playlist();
+
+            return Err(error::Error::from(error));
+        }
+    };
+
+    Ok(playlist)
 }
