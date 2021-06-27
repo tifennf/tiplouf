@@ -93,6 +93,17 @@ pub struct TrackJson {
     pub track_id: String,
 }
 
+impl Clone for TrackJson {
+    fn clone(&self) -> Self {
+        TrackJson {
+            url: self.url.clone(),
+            track_id: self.track_id.clone(),
+        }
+    }
+}
+
+/////////
+
 pub struct PlaylistManager {
     collection: Collection,
 }
@@ -224,6 +235,28 @@ impl TrackManager {
         let result = self.tracklist_update(decrease_count).await?;
 
         parse_playlist(result)
+    }
+
+    pub async fn get_one(&self, track_id: ObjectId) -> Result<TrackJson, mongodb::error::Error> {
+        let filter = doc! { "_id": self.playlist_id.clone()};
+
+        let result = self.collection.find_one(filter, None).await?;
+
+        let playlist = parse_playlist(result)?;
+
+        let track = playlist
+            .tracklist
+            .iter()
+            .find(|track| track.track_id == track_id.to_string());
+
+        match track.cloned() {
+            Some(track) => Ok(track),
+            None => {
+                let error = crate::error::no_playlist();
+
+                return Err(error::Error::from(error));
+            }
+        }
     }
 
     //return playlist with updated tracklist and count

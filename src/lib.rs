@@ -5,6 +5,7 @@ pub mod route;
 pub mod schema;
 
 use actix_cors::Cors;
+use actix_files::Files;
 use actix_web::{
     middleware::{Logger, NormalizePath},
     App, HttpServer,
@@ -25,6 +26,7 @@ pub async fn start(client: Client) -> std::io::Result<()> {
             .wrap(NormalizePath::default())
             .data(client.clone())
             .configure(route::config)
+            .service(Files::new("/", "./public/root/").index_file("index.html"))
     })
     .bind(ADDR)?
     .run()

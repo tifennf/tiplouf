@@ -116,3 +116,21 @@ pub async fn remove_track(
 
     Ok(res)
 }
+
+pub async fn get_track(
+    client: web::Data<Client>,
+    web::Path((id, track_id)): web::Path<(String, String)>,
+) -> Result<HttpResponse> {
+    let id = ObjectId::with_string(&id).unwrap();
+    let track_id = ObjectId::with_string(&track_id).unwrap();
+    let manager = TrackManager::init(client.database(DB).collection(COLLECTION), id);
+
+    let result = manager.get_one(track_id).await;
+
+    let res = match result {
+        Ok(playlist) => HttpResponse::Ok().json(ApiResponse::success(playlist)),
+        Err(e) => HttpResponse::InternalServerError().json(ApiResponse::fail(e.labels())),
+    };
+
+    Ok(res)
+}
