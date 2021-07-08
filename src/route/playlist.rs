@@ -1,136 +1,31 @@
-use crate::{
-    database::playlist::{PlaylistManager, TrackManager},
-    schema::{ApiResponse, PlaylistRequest, TrackRequest},
-};
-use actix_web::{web, HttpResponse, Result};
-use mongodb::{
-    bson::{self, oid::ObjectId},
-    Client,
-};
+mod database;
+mod error;
+mod handler;
+mod middleware;
+mod schema;
+mod utils;
 
-const DB: &str = "tiplouf";
-const COLLECTION: &str = "playlist";
+use actix_web::web;
 
-//get /playlist/
-pub async fn get_all(client: web::Data<Client>) -> Result<HttpResponse> {
-    let manager = PlaylistManager::init(client.database(DB).collection(COLLECTION));
+// /playlist/
+pub fn scope(cfg: &mut web::ServiceConfig) {
+    cfg.service(
+        web::resource("")
+            .route(web::get().to(handler::get_all))
+            .route(web::post().to(handler::create_one)),
+    );
 
-    let result = manager.get_all().await;
+    cfg.service(
+        web::resource("/{id}/")
+            .route(web::get().to(handler::get_one))
+            .route(web::delete().to(handler::delete_one)),
+    );
 
-    let res = match result {
-        Ok(playlist_vec) => HttpResponse::Ok().json(ApiResponse::success(playlist_vec)),
-        Err(e) => HttpResponse::InternalServerError().json(ApiResponse::fail(e.labels())),
-    };
+    cfg.service(web::resource("/{id}/track/").route(web::post().to(handler::add_track)));
 
-    Ok(res)
-}
-
-//post /playlist/
-pub async fn create_one(
-    client: web::Data<Client>,
-    req_body: web::Json<PlaylistRequest>,
-) -> Result<HttpResponse> {
-    let manager = PlaylistManager::init(client.database(DB).collection(COLLECTION));
-    let playlist = req_body.0.draft();
-
-    let result = manager.create_one(playlist).await;
-
-    let res = match result {
-        Ok(playlist) => HttpResponse::Ok().json(ApiResponse::success(playlist)),
-        Err(e) => HttpResponse::InternalServerError().json(ApiResponse::fail(e.labels())),
-    };
-
-    Ok(res)
-}
-
-//delete /playlist/{id}
-pub async fn delete_one(
-    client: web::Data<Client>,
-    web::Path(id): web::Path<String>,
-) -> Result<HttpResponse> {
-    let id = ObjectId::with_string(&id).unwrap();
-    let manager = PlaylistManager::init(client.database(DB).collection(COLLECTION));
-
-    let result = manager.delete_one(id).await;
-    let res = match result {
-        Ok(playlist) => HttpResponse::Ok().json(ApiResponse::success(playlist)),
-        Err(e) => HttpResponse::InternalServerError().json(ApiResponse::fail(e.labels())),
-    };
-
-    Ok(res)
-}
-
-//get /playlist/{id}
-pub async fn get_one(
-    client: web::Data<Client>,
-    web::Path(id): web::Path<String>,
-) -> Result<HttpResponse> {
-    let id = ObjectId::with_string(&id).unwrap();
-    let manager = PlaylistManager::init(client.database(DB).collection(COLLECTION));
-
-    let result = manager.get_one(id).await;
-
-    let res = match result {
-        Ok(playlist) => HttpResponse::Ok().json(ApiResponse::success(playlist)),
-        Err(e) => HttpResponse::InternalServerError().json(ApiResponse::fail(e.labels())),
-    };
-
-    Ok(res)
-}
-
-//post /playlist/{id}/track
-pub async fn add_track(
-    client: web::Data<Client>,
-    web::Path(id): web::Path<String>,
-    req_body: web::Json<TrackRequest>,
-) -> Result<HttpResponse> {
-    let id = ObjectId::with_string(&id).unwrap();
-    let track = bson::to_document(&req_body.0.complete()).unwrap();
-    let manager = TrackManager::init(client.database(DB).collection(COLLECTION), id);
-
-    //add track inside tracklist field
-    let result = manager.add_one(track).await;
-
-    let res = match result {
-        Ok(playlist) => HttpResponse::Ok().json(ApiResponse::fail(playlist)),
-        Err(e) => HttpResponse::InternalServerError().json(ApiResponse::fail(e.labels())),
-    };
-
-    Ok(res)
-}
-
-pub async fn remove_track(
-    client: web::Data<Client>,
-    web::Path((id, track_id)): web::Path<(String, String)>,
-) -> Result<HttpResponse> {
-    let id = ObjectId::with_string(&id).unwrap();
-    let track_id = ObjectId::with_string(&track_id).unwrap();
-    let manager = TrackManager::init(client.database(DB).collection(COLLECTION), id);
-
-    let result = manager.remove_one(track_id).await;
-
-    let res = match result {
-        Ok(playlist) => HttpResponse::Ok().json(ApiResponse::success(playlist)),
-        Err(e) => HttpResponse::InternalServerError().json(ApiResponse::fail(e.labels())),
-    };
-
-    Ok(res)
-}
-
-pub async fn get_track(
-    client: web::Data<Client>,
-    web::Path((id, track_id)): web::Path<(String, String)>,
-) -> Result<HttpResponse> {
-    let id = ObjectId::with_string(&id).unwrap();
-    let track_id = ObjectId::with_string(&track_id).unwrap();
-    let manager = TrackManager::init(client.database(DB).collection(COLLECTION), id);
-
-    let result = manager.get_one(track_id).await;
-
-    let res = match result {
-        Ok(playlist) => HttpResponse::Ok().json(ApiResponse::success(playlist)),
-        Err(e) => HttpResponse::InternalServerError().json(ApiResponse::fail(e.labels())),
-    };
-
-    Ok(res)
+    cfg.service(
+        web::resource("/{id}/track/{track_id}/")
+            .route(web::delete().to(handler::remove_track))
+            .route(web::get().to(handler::get_track)),
+    );
 }

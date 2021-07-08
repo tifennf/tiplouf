@@ -1,8 +1,6 @@
-pub mod database;
 pub mod error;
-pub mod middleware;
+pub mod global;
 pub mod route;
-pub mod schema;
 
 use actix_cors::Cors;
 use actix_files::Files;
