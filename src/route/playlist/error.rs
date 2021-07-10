@@ -1,8 +1,18 @@
+use derive_more::{Display, Error};
 use std::io;
 
-pub fn no_id() -> io::Error {
-    io::Error::new(io::ErrorKind::InvalidData, "Id not generate")
+pub enum Field {
+    Playlist(Playlist),
 }
-pub fn no_playlist() -> io::Error {
-    io::Error::new(io::ErrorKind::InvalidData, "No playlist found")
+
+#[derive(Debug, Display)]
+pub enum Playlist {
+    #[display(fmt = "Playlist not found")]
+    NotFound,
+    #[display(fmt = "Invalid playlist id")]
+    InvalidId,
+    #[display(fmt = "Track not found")]
+    TrackNotFound,
+    #[display(fmt = "Invalid track id")]
+    TrackInvalidId,
 }

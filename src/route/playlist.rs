@@ -7,6 +7,11 @@ mod utils;
 
 use actix_web::web;
 
+pub enum Ressource {
+    Playlist,
+    Track,
+}
+
 // /playlist/
 pub fn scope(cfg: &mut web::ServiceConfig) {
     cfg.service(

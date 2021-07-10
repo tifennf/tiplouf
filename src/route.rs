@@ -1,4 +1,4 @@
-mod playlist;
+pub mod playlist;
 
 use actix_web::web;
 

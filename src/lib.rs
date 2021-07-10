@@ -1,6 +1,5 @@
-pub mod error;
-pub mod global;
 pub mod route;
+pub mod shared;
 
 use actix_cors::Cors;
 use actix_files::Files;

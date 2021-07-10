@@ -2,9 +2,7 @@ mod manager;
 
 pub use manager::{PlaylistManager, TrackManager};
 
-use mongodb::{
-    bson::{self, doc, oid::ObjectId, Document},
-};
+use mongodb::bson::{self, doc, oid::ObjectId, Document};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]

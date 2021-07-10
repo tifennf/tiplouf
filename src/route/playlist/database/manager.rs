@@ -6,7 +6,13 @@ use mongodb::{
     Collection,
 };
 
-use crate::route::playlist::database::{Playlist, PlaylistDraft, PlaylistJson, TrackJson};
+use crate::{
+    route::playlist::{
+        self,
+        database::{Playlist, PlaylistDraft, PlaylistJson, TrackJson},
+    },
+    shared::ApiError,
+};
 
 pub struct PlaylistManager {
     collection: Collection,
@@ -18,29 +24,21 @@ impl PlaylistManager {
     }
 
     //need fix about cursor
-    pub async fn get_all(&self) -> Result<Vec<PlaylistJson>, error::Error> {
-        let collection = self.collection.find(None, None).await.unwrap();
+    pub async fn get_all(&self) -> Result<Vec<PlaylistJson>, ApiError> {
+        let collection = self.collection.find(None, None).await?;
         let collection = collection.try_collect::<Vec<Document>>().await?;
 
-        //convert vec into a different one
-        let result = collection
+        collection
             .iter()
             .map(|document| {
                 let document = document.clone();
 
-                //only way to fail is if collection is corrupt, anyway i dunno how to handle that from doc in closure
-                let result = bson::from_document::<Playlist>(document)
-                    .unwrap()
-                    .get_json();
-
-                result
+                Ok(bson::from_document::<Playlist>(document)?.get_json())
             })
-            .collect::<Vec<PlaylistJson>>();
-
-        Ok(result)
+            .collect::<Result<Vec<PlaylistJson>, ApiError>>()
     }
 
-    pub async fn create_one(&self, playlist: PlaylistDraft) -> Result<PlaylistJson, error::Error> {
+    pub async fn create_one(&self, playlist: PlaylistDraft) -> Result<PlaylistJson, ApiError> {
         let id = self
             .collection
             .insert_one(playlist.get_doc(), None)
@@ -48,20 +46,13 @@ impl PlaylistManager {
             .inserted_id;
 
         let id = id.as_object_id().map(|id| id.to_string());
-
-        let id = match id {
-            Some(id) => id,
-            None => {
-                let error = crate::error::no_id();
-
-                return Err(error::Error::from(error));
-            }
-        };
-
-        Ok(playlist.get_json(id))
+        match id {
+            Some(id) => Ok(playlist.get_json(id)),
+            None => Err(ApiError::id_not_generate()),
+        }
     }
 
-    pub async fn delete_one(&self, id: ObjectId) -> Result<PlaylistJson, error::Error> {
+    pub async fn delete_one(&self, id: ObjectId) -> Result<PlaylistJson, ApiError> {
         let result = self
             .collection
             .find_one_and_delete(doc! { "_id": id }, None)
@@ -70,7 +61,7 @@ impl PlaylistManager {
         parse_playlist(result)
     }
 
-    pub async fn get_one(&self, id: ObjectId) -> Result<PlaylistJson, error::Error> {
+    pub async fn get_one(&self, id: ObjectId) -> Result<PlaylistJson, ApiError> {
         let result = self.collection.find_one(doc! { "_id": id}, None).await?;
 
         parse_playlist(result)
@@ -90,7 +81,7 @@ impl TrackManager {
         }
     }
 
-    pub async fn add_one(&self, track: Document) -> Result<PlaylistJson, mongodb::error::Error> {
+    pub async fn add_one(&self, track: Document) -> Result<PlaylistJson, ApiError> {
         let add_track = doc! {
             "$push": {
                 "tracklist": track
@@ -113,10 +104,7 @@ impl TrackManager {
         parse_playlist(result)
     }
 
-    pub async fn remove_one(
-        &self,
-        track_id: ObjectId,
-    ) -> Result<PlaylistJson, mongodb::error::Error> {
+    pub async fn remove_one(&self, track_id: ObjectId) -> Result<PlaylistJson, ApiError> {
         let filter = doc! { "_id": self.playlist_id.clone()};
 
         let remove_track = doc! {
@@ -141,11 +129,10 @@ impl TrackManager {
         parse_playlist(result)
     }
 
-    pub async fn get_one(&self, track_id: ObjectId) -> Result<TrackJson, mongodb::error::Error> {
+    pub async fn get_one(&self, track_id: ObjectId) -> Result<TrackJson, ApiError> {
         let filter = doc! { "_id": self.playlist_id.clone()};
 
         let result = self.collection.find_one(filter, None).await?;
-
         let playlist = parse_playlist(result)?;
 
         let track = playlist
@@ -155,42 +142,33 @@ impl TrackManager {
 
         match track.cloned() {
             Some(track) => Ok(track),
-            None => {
-                let error = crate::error::no_playlist();
-
-                return Err(error::Error::from(error));
-            }
+            None => Err(ApiError::ValidationError {
+                info: playlist::error::Playlist::TrackInvalidId.to_string(),
+            }),
         }
     }
 
     //return playlist with updated tracklist and count
-    async fn tracklist_update(
-        &self,
-        count_update: Document,
-    ) -> Result<Option<Document>, mongodb::error::Error> {
+    async fn tracklist_update(&self, count_update: Document) -> Result<Option<Document>, ApiError> {
         let filter = doc! { "_id": self.playlist_id.clone() };
         let option = FindOneAndUpdateOptions::builder()
             .return_document(ReturnDocument::After)
             .build();
 
-        let result = self
+        let playlist = self
             .collection
             .find_one_and_update(filter, count_update, option)
             .await?;
 
-        Ok(result)
+        Ok(playlist)
     }
 }
 
-fn parse_playlist(result: Option<Document>) -> Result<PlaylistJson, mongodb::error::Error> {
-    let playlist = match result {
-        Some(playlist) => bson::from_document::<Playlist>(playlist)?.get_json(),
-        None => {
-            let error = crate::error::no_playlist();
-
-            return Err(error::Error::from(error));
-        }
-    };
-
-    Ok(playlist)
+fn parse_playlist(playlist: Option<Document>) -> Result<PlaylistJson, ApiError> {
+    match playlist {
+        Some(playlist) => Ok(bson::from_document::<Playlist>(playlist)?.get_json()),
+        None => Err(ApiError::ValidationError {
+            info: playlist::error::Playlist::InvalidId.to_string(),
+        }),
+    }
 }
