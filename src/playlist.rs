@@ -2,8 +2,8 @@ mod database;
 mod error;
 mod handler;
 mod middleware;
+mod path;
 mod schema;
 mod utils;
-mod ressource;
 
-pub use ressource::{Ressource, scope};
+pub use path::{scope, Ressource};

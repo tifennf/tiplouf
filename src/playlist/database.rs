@@ -1,5 +1,5 @@
-mod manager;
 mod document;
+mod manager;
 
-pub use manager::{PlaylistManager, TrackManager};
 pub use document::{Playlist, PlaylistDraft, PlaylistJson, Track, TrackJson};
+pub use manager::{PlaylistManager, TrackManager};

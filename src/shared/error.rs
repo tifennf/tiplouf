@@ -15,17 +15,6 @@ pub enum Ressource {
     Track,
 }
 
-impl Clone for Ressource {
-    fn clone(&self) -> Self {
-        match self {
-            Ressource::Playlist => Ressource::Playlist,
-            Ressource::Track => Ressource::Track,
-        }
-    }
-}
-
-impl std::error::Error for Ressource {}
-
 #[derive(Debug, Display, Serialize)]
 pub enum ApiError {
     #[display(fmt = "Validation error: {}", info)]
@@ -42,7 +31,51 @@ impl ApiError {
     }
 }
 
+impl std::error::Error for Ressource {}
 impl std::error::Error for ApiError {}
+
+impl Clone for Ressource {
+    fn clone(&self) -> Self {
+        match self {
+            Ressource::Playlist => Ressource::Playlist,
+            Ressource::Track => Ressource::Track,
+        }
+    }
+}
+impl Clone for ApiError {
+    fn clone(&self) -> Self {
+        match self {
+            ApiError::ValidationError { info } => ApiError::ValidationError { info: info.clone() },
+            ApiError::QueryError { ressource, info } => ApiError::QueryError {
+                ressource: ressource.clone(),
+                info: info.clone(),
+            },
+            ApiError::InternalServerError(err) => ApiError::InternalServerError(err.clone()),
+        }
+    }
+}
+
+impl actix_web::error::ResponseError for ApiError {
+    fn error_response(&self) -> actix_web::HttpResponse {
+        // let data = self.clone();
+
+        ApiResponse::fail(Some(self.clone()), self.status_code())
+    }
+
+    fn status_code(&self) -> StatusCode {
+        match self {
+            ApiError::ValidationError { info: _ } => StatusCode::BAD_REQUEST,
+            ApiError::QueryError {
+                ressource: _,
+                info: _,
+            } => StatusCode::NOT_FOUND,
+            ApiError::InternalServerError(err) => {
+                error!("DatabaseError: {}", err);
+                StatusCode::INTERNAL_SERVER_ERROR
+            }
+        }
+    }
+}
 
 impl From<io::Error> for ApiError {
     fn from(err: io::Error) -> Self {
@@ -73,38 +106,3 @@ impl From<mongodb::bson::ser::Error> for ApiError {
 //         }
 //     }
 // }
-
-impl actix_web::error::ResponseError for ApiError {
-    fn error_response(&self) -> actix_web::HttpResponse {
-        // let data = self.clone();
-
-        ApiResponse::fail(Some(self.clone()), self.status_code())
-    }
-
-    fn status_code(&self) -> StatusCode {
-        match self {
-            ApiError::ValidationError { info: _ } => StatusCode::BAD_REQUEST,
-            ApiError::QueryError {
-                ressource: _,
-                info: _,
-            } => StatusCode::NOT_FOUND,
-            ApiError::InternalServerError(err) => {
-                error!("DatabaseError: {}", err);
-                StatusCode::INTERNAL_SERVER_ERROR
-            }
-        }
-    }
-}
-
-impl Clone for ApiError {
-    fn clone(&self) -> Self {
-        match self {
-            ApiError::ValidationError { info } => ApiError::ValidationError { info: info.clone() },
-            ApiError::QueryError { ressource, info } => ApiError::QueryError {
-                ressource: ressource.clone(),
-                info: info.clone(),
-            },
-            ApiError::InternalServerError(err) => ApiError::InternalServerError(err.clone()),
-        }
-    }
-}
