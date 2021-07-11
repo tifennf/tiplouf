@@ -1,8 +1,4 @@
-use std::{
-    fmt::{Debug, Display},
-    io,
-    mem::Discriminant,
-};
+use std::{fmt::Debug, io};
 
 use super::ApiResponse;
 use actix_web::http::StatusCode;
@@ -21,7 +17,10 @@ pub enum Ressource {
 
 impl Clone for Ressource {
     fn clone(&self) -> Self {
-        todo!()
+        match self {
+            Ressource::Playlist => Ressource::Playlist,
+            Ressource::Track => Ressource::Track,
+        }
     }
 }
 
@@ -67,25 +66,28 @@ impl From<mongodb::bson::ser::Error> for ApiError {
     }
 }
 
-impl From<mongodb::bson::oid::Error> for ApiError {
-    fn from(err: mongodb::bson::oid::Error) -> Self {
-        ApiError::ValidationError {
-            info: err.to_string(),
-        }
-    }
-}
+// impl From<mongodb::bson::oid::Error> for ApiError {
+//     fn from(err: mongodb::bson::oid::Error) -> Self {
+//         ApiError::ValidationError {
+//             info: err.to_string(),
+//         }
+//     }
+// }
 
 impl actix_web::error::ResponseError for ApiError {
     fn error_response(&self) -> actix_web::HttpResponse {
-        let data = self.clone();
+        // let data = self.clone();
 
         ApiResponse::fail(Some(self.clone()), self.status_code())
     }
 
     fn status_code(&self) -> StatusCode {
         match self {
-            ApiError::ValidationError { info } => StatusCode::BAD_REQUEST,
-            ApiError::QueryError { ressource, info } => todo!(),
+            ApiError::ValidationError { info: _ } => StatusCode::BAD_REQUEST,
+            ApiError::QueryError {
+                ressource: _,
+                info: _,
+            } => StatusCode::NOT_FOUND,
             ApiError::InternalServerError(err) => {
                 error!("DatabaseError: {}", err);
                 StatusCode::INTERNAL_SERVER_ERROR

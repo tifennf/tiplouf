@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use crate::route::playlist::database as db;
+use crate::playlist::database as db;
 use mongodb::bson::{doc, oid::ObjectId, Document};
 use serde::{Deserialize, Serialize};
 

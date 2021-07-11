@@ -1,4 +1,4 @@
-pub mod playlist;
+use crate::playlist;
 
 use actix_web::web;
 

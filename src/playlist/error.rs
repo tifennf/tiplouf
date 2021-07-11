@@ -1,9 +1,4 @@
-use derive_more::{Display, Error};
-use std::io;
-
-pub enum Field {
-    Playlist(Playlist),
-}
+use derive_more::Display;
 
 #[derive(Debug, Display)]
 pub enum Playlist {

@@ -1,13 +1,12 @@
 use futures::TryStreamExt;
 use mongodb::{
     bson::{self, doc, oid::ObjectId, Document},
-    error,
     options::{FindOneAndUpdateOptions, ReturnDocument},
     Collection,
 };
 
 use crate::{
-    route::playlist::{
+    playlist::{
         self,
         database::{Playlist, PlaylistDraft, PlaylistJson, TrackJson},
     },
@@ -67,6 +66,8 @@ impl PlaylistManager {
         parse_playlist(result)
     }
 }
+
+////
 
 pub struct TrackManager {
     collection: Collection,
@@ -143,7 +144,7 @@ impl TrackManager {
         match track.cloned() {
             Some(track) => Ok(track),
             None => Err(ApiError::ValidationError {
-                info: playlist::error::Playlist::TrackInvalidId.to_string(),
+                info: playlist::error::Playlist::TrackNotFound.to_string(),
             }),
         }
     }
@@ -168,7 +169,7 @@ fn parse_playlist(playlist: Option<Document>) -> Result<PlaylistJson, ApiError> 
     match playlist {
         Some(playlist) => Ok(bson::from_document::<Playlist>(playlist)?.get_json()),
         None => Err(ApiError::ValidationError {
-            info: playlist::error::Playlist::InvalidId.to_string(),
+            info: playlist::error::Playlist::NotFound.to_string(),
         }),
     }
 }

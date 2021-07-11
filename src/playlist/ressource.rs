@@ -1,11 +1,6 @@
-mod database;
-mod error;
-mod handler;
-mod middleware;
-mod schema;
-mod utils;
-
 use actix_web::web;
+
+use super::handler;
 
 pub enum Ressource {
     Playlist,
