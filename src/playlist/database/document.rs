@@ -34,9 +34,9 @@ impl PlaylistDraft {
 
 #[derive(Serialize, Deserialize)]
 pub struct Playlist {
-    pub(crate) tracklist: Vec<Track>,
-    pub(crate) trackcount: i64,
-    pub(crate) tag: Option<String>,
+    pub tracklist: Vec<Track>,
+    pub trackcount: i64,
+    pub tag: Option<String>,
     #[serde(rename = "_id")]
     pub id: ObjectId,
 }

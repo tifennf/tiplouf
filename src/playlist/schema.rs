@@ -10,11 +10,6 @@ pub struct PlaylistRequest {
     pub tag: Option<String>,
 }
 
-#[derive(Serialize, Deserialize)]
-pub struct TrackRequest {
-    url: String,
-}
-
 impl PlaylistRequest {
     pub fn draft(self) -> db::PlaylistDraft {
         let tracklist = self
@@ -38,13 +33,4 @@ impl PlaylistRequest {
     }
 }
 
-impl TrackRequest {
-    pub fn complete(self) -> db::Track {
-        let track_id = ObjectId::new();
 
-        db::Track {
-            url: self.url,
-            track_id,
-        }
-    }
-}

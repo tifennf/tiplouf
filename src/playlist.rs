@@ -1,9 +1,9 @@
 mod database;
-mod error;
+pub mod error;
 mod handler;
-mod middleware;
-mod path;
-mod schema;
-mod utils;
+mod scope;
+pub mod schema;
 
-pub use path::{scope, Ressource};
+pub use scope::{scope, Ressource};
+
+pub use schema::PlaylistRequest;

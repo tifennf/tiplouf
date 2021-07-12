@@ -1,6 +1,7 @@
 pub mod playlist;
 pub mod route;
 pub mod shared;
+pub mod track;
 
 use actix_cors::Cors;
 use actix_files::Files;

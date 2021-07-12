@@ -1,7 +1,4 @@
-use crate::{
-    playlist::{self, schema},
-    shared::ApiError,
-};
+use crate::{playlist, shared::ApiError, track};
 use actix_web::Result;
 use mongodb::bson::{self, oid::ObjectId, Document};
 
@@ -17,7 +14,7 @@ pub fn validate_t_id(track_id: String) -> Result<ObjectId, ApiError> {
     })
 }
 
-pub fn validate_track(track: schema::TrackRequest) -> Result<Document, ApiError> {
+pub fn validate_track(track: track::TrackRequest) -> Result<Document, ApiError> {
     Ok(bson::to_document(&track.complete())?)
 }
 
@@ -30,3 +27,4 @@ pub fn validate_id_playlist_track(
 
     Ok((p_id, track_id))
 }
+
