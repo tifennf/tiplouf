@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use crate::playlist::database as db;
+use crate::{playlist::database as db, track::TrackJson};
 use mongodb::bson::{doc, oid::ObjectId, Document};
 use serde::{Deserialize, Serialize};
 
@@ -16,10 +16,8 @@ impl PlaylistRequest {
             .tracklist
             .iter()
             .map(|track| {
-                let track_id = ObjectId::new();
                 doc! {
                     "url": track,
-                    "track_id": track_id,
                 }
             })
             .collect::<Vec<Document>>();
@@ -31,6 +29,14 @@ impl PlaylistRequest {
             tag: self.tag,
         }
     }
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct PlaylistJson {
+    pub tracklist: Vec<Option<TrackJson>>,
+    pub trackcount: i64,
+    pub tag: Option<String>,
+    pub id: String,
 }
 
 

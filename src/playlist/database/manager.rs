@@ -1,76 +1,83 @@
+use futures::StreamExt;
 use futures::TryStreamExt;
-use mongodb::{
-    bson::{self, doc, oid::ObjectId, Document},
-    Collection,
-};
+use futures::stream::{self, StreamExt};
+use mongodb::{Collection, Database, bson::{self, doc, oid::ObjectId, Document}};
 
-use crate::{playlist::{database::{Playlist, PlaylistDraft, PlaylistJson}}, shared::{ApiError}};
+use crate::{playlist::{schema::PlaylistJson, database::{Playlist, PlaylistDraft}}, shared::{ApiError}};
+
+
 
 
 pub struct PlaylistManager {
-    collection: Collection,
+    p_collection: Collection,
+    t_collection: Collection,
 }
 
 impl PlaylistManager {
-    pub fn init(collection: Collection) -> PlaylistManager {
-        PlaylistManager { collection }
+    pub fn init(p_collection: Collection, t_collection: Collection) -> PlaylistManager {
+        PlaylistManager { p_collection, t_collection }
     }
     
     //need fix about cursor
-    pub async fn get_all(&self) -> Result<Vec<PlaylistJson>, ApiError> {
-        let collection = self.collection.find(None, None).await?;
+    pub async fn get_all(&self, database: &Database) -> Result<Vec<PlaylistJson>, ApiError> {
+        let collection = self.p_collection.find(None, None).await?;
         let collection = collection.try_collect::<Vec<Document>>().await?;
-        
-        collection
-        .iter()
-        .map(|document| {
-            let document = document.clone();
+
+
+        let mut p_list = Vec::new();
+        for playlist in collection {
             
-            Ok(bson::from_document::<Playlist>(document)?.get_json())
-        })
-        .collect::<Result<Vec<PlaylistJson>, ApiError>>()
+            let playlist = bson::from_document::<Playlist>(playlist)?.to_json(&self.p_collection).await?;
+
+            p_list.push(playlist);
+        }
+        
+        Ok(p_list)
     }
     
     pub async fn get_one(&self, id: ObjectId) -> Result<PlaylistJson, ApiError> {
-        let result = self.collection.find_one(doc! { "_id": id}, None).await?;
+        let playlist = self.p_collection.find_one(doc! { "_id": id}, None).await?;
 
-        utils::parse_playlist(result)
+        utils::parse_playlist(playlist)
     }
 
     pub async fn add_one(&self, playlist: PlaylistDraft) -> Result<PlaylistJson, ApiError> {
-        let id = self
-            .collection
-            .insert_one(playlist.get_doc(), None)
-            .await?
-            .inserted_id;
+        let doc = bson::to_document(&playlist)?;
+        let result = self
+            .p_collection
+            .insert_one(doc, None)
+            .await?;
 
-        let id = id.as_object_id().map(|id| id.to_string());
-        match id {
-            Some(id) => Ok(playlist.get_json(id)),
-            None => Err(ApiError::id_not_generate()),
-        }
+
+        let id = result.inserted_id.as_object_id().map(|id| id.to_string());
+        todo!()
     }
 
     pub async fn remove_one(&self, id: ObjectId) -> Result<PlaylistJson, ApiError> {
         let result = self
-            .collection
+            .p_collection
             .find_one_and_delete(doc! { "_id": id }, None)
             .await?;
 
         utils::parse_playlist(result)
     }
 
+    // pub async fn add_track(&self, p_id: ObjectId, )s
+
 }
 
+// struct TrackList {
+
+// }
 
 mod utils {
-    use crate::{playlist::{self, database::{Playlist, PlaylistJson}}, shared::ApiError, track};
+    use crate::{playlist::{self, database::{Playlist}, schema::PlaylistJson}, shared::ApiError, track};
     use actix_web::Result;
     use mongodb::bson::{self, oid::ObjectId, Document};
     
     pub fn parse_playlist(playlist: Option<Document>) -> Result<PlaylistJson, ApiError> {
         match playlist {
-            Some(playlist) => Ok(bson::from_document::<Playlist>(playlist)?.get_json()),
+            Some(playlist) => Ok(bson::from_document::<Playlist>(playlist)?.to_json()),
             None => Err(ApiError::ValidationError {
                 info: playlist::error::Playlist::NotFound.to_string(),
             }),

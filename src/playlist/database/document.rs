@@ -1,5 +1,7 @@
-use mongodb::bson::{self, doc, oid::ObjectId, Document};
+use mongodb::{Collection, Database, bson::{self, doc, oid::ObjectId, Document}};
 use serde::{Deserialize, Serialize};
+
+use crate::{playlist::schema::PlaylistJson, shared::ApiError, track::{self, TrackJson, TrackManager}};
 
 #[derive(Serialize, Deserialize)]
 pub struct PlaylistDraft {
@@ -8,33 +10,30 @@ pub struct PlaylistDraft {
     pub tag: Option<String>,
 }
 
-impl PlaylistDraft {
-    pub fn get_doc(&self) -> Document {
-        bson::to_document(self).unwrap()
-    }
+// impl PlaylistDraft {
+//     pub async fn to_json(self, id: String, database: &Database) -> Result<PlaylistJson, ApiError> {
+//         let tracklist = map_tracklist(self.tracklist, database).await?;
 
-    pub fn get_json(&self, id: String) -> PlaylistJson {
-        let tracklist = self
-            .tracklist
-            .iter()
-            .map(|track| {
-                bson::from_document::<Track>(track.clone())
-                    .unwrap()
-                    .get_json()
-            })
-            .collect::<Vec<TrackJson>>();
-        PlaylistJson {
-            tracklist,
-            trackcount: self.trackcount,
-            tag: self.tag.clone(),
-            id,
-        }
-    }
+//         let playlist = PlaylistJson {
+//             tracklist: self.tracklist,
+//             trackcount: self.trackcount,
+//             tag: self.tag,
+//             id,
+//         };
+
+//         Ok(playlist)
+//     }
+// }
+
+#[derive(Serialize, Deserialize)]
+struct TrackRef {
+    #[serde(rename = "_id")]
+    pub id: ObjectId,
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct Playlist {
-    pub tracklist: Vec<Track>,
+    pub tracklist: Vec<TrackRef>,
     pub trackcount: i64,
     pub tag: Option<String>,
     #[serde(rename = "_id")]
@@ -42,56 +41,28 @@ pub struct Playlist {
 }
 
 impl Playlist {
-    pub fn get_json(&self) -> PlaylistJson {
-        let tracklist = self
-            .tracklist
-            .iter()
-            .map(|track| track.get_json())
-            .collect::<Vec<TrackJson>>();
-
-        PlaylistJson {
+    pub async fn to_json(self, collection: &Collection) -> Result<PlaylistJson, ApiError> {
+        
+        let tracklist = map_tracklist(self.tracklist, collection).await?;
+        
+        let playlist = PlaylistJson {
             tracklist,
             trackcount: self.trackcount,
-            tag: self.tag.clone(),
+            tag: self.tag,
             id: self.id.to_string(),
-        }
+        };
+
+        Ok(playlist)
     }
 }
 
-#[derive(Serialize, Deserialize)]
-pub struct PlaylistJson {
-    pub tracklist: Vec<TrackJson>,
-    pub trackcount: i64,
-    pub tag: Option<String>,
-    pub id: String,
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct Track {
-    pub url: String,
-    pub track_id: ObjectId,
-}
-
-impl Track {
-    pub fn get_json(&self) -> TrackJson {
-        TrackJson {
-            url: self.url.clone(),
-            track_id: self.track_id.to_string(),
-        }
+async fn map_tracklist(tracklist: Vec<TrackRef>, t_collection: &Collection) -> Result<Vec<Option<TrackJson>>, ApiError> {
+    let manager = TrackManager::init(t_collection.clone()).await;
+    let mut t_list = Vec::new();
+    for track in tracklist.iter() {
+        t_list.push(manager.get_one(track.id.clone()).await?);
     }
+
+    Ok(t_list)
 }
 
-#[derive(Serialize, Deserialize)]
-pub struct TrackJson {
-    pub url: String,
-    pub track_id: String,
-}
-
-impl Clone for TrackJson {
-    fn clone(&self) -> Self {
-        TrackJson {
-            url: self.url.clone(),
-            track_id: self.track_id.clone(),
-        }
-    }
-}

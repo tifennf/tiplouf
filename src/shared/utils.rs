@@ -14,9 +14,6 @@ pub fn validate_t_id(track_id: String) -> Result<ObjectId, ApiError> {
     })
 }
 
-pub fn validate_track(track: track::TrackRequest) -> Result<Document, ApiError> {
-    Ok(bson::to_document(&track.complete())?)
-}
 
 pub fn validate_id_playlist_track(
     p_id: String,

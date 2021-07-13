@@ -1,19 +1,57 @@
-use mongodb::{
-    bson::{self, doc, oid::ObjectId, Document},
-    options::{FindOneAndUpdateOptions, ReturnDocument},
-    Collection,
-};
+use mongodb::{Collection, Database, bson::{self, doc, oid::ObjectId}};
 
-use crate::{
-    shared::ApiError,
-};
+use crate::{shared::ApiError, track::{TrackRequest, schema::TrackJson}};
 
-use super::TrackJson;
+use super::{Track};
 
 pub struct TrackManager {
     collection: Collection,
-    playlist_id: ObjectId,
 }
+
+impl TrackManager {
+    pub async fn init(collection: Collection) -> TrackManager {
+        TrackManager {
+            collection,
+        }
+    }
+
+    pub async fn get_one(&self, id: ObjectId) -> Result<Option<TrackJson>, ApiError> {
+        let track = self.collection.find_one(doc! {"_id": id}, None).await?;
+        let track = match track {
+            Some(track) => Some(bson::from_document::<Track>(track)?.to_json()),
+            None => None,
+        };
+        
+        Ok(track)
+    }
+
+    pub async fn add_one(&self, track: TrackRequest) -> Result<Option<TrackJson>, ApiError> {
+        let doc = bson::to_document(&track)?;
+        let result = self.collection.insert_one(doc, None).await?;
+        
+        let id = result.inserted_id.as_object_id().map(|id| id.to_string());
+
+        let track = match id {
+            Some(id) => Some(track.to_json(id)),
+            None => None,
+        };
+
+        Ok(track)
+    }
+
+    pub async fn remove_one(&self, id: ObjectId) -> Result<Option<TrackJson>, ApiError> {
+        let track = self.collection.find_one_and_delete(doc!{ "_id": id }, None).await?;
+        let track = match track {
+            Some(track) => Some(bson::from_document::<Track>(track)?.to_json()),
+            None => None,
+        };
+
+        Ok(track)
+    }
+} 
+
+
+
 
 // impl TrackManager {
 //     pub fn init(collection: Collection, playlist_id: ObjectId) -> TrackManager {

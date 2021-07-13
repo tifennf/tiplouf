@@ -1,32 +1,22 @@
-use mongodb::bson::{self, doc, oid::ObjectId, Document};
+use mongodb::bson::{doc, oid::ObjectId};
 use serde::{Deserialize, Serialize};
+
+use crate::track::schema::TrackJson;
+pub struct TrackDraft {
+
+}
 
 #[derive(Serialize, Deserialize)]
 pub struct Track {
     pub url: String,
-    pub track_id: ObjectId,
+    pub id: ObjectId,
 }
 
 impl Track {
-    pub fn get_json(&self) -> TrackJson {
+    pub fn to_json(self) -> TrackJson {
         TrackJson {
-            url: self.url.clone(),
-            track_id: self.track_id.to_string(),
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct TrackJson {
-    pub url: String,
-    pub track_id: String,
-}
-
-impl Clone for TrackJson {
-    fn clone(&self) -> Self {
-        TrackJson {
-            url: self.url.clone(),
-            track_id: self.track_id.clone(),
+            url: self.url,
+            id: self.id.to_string(),
         }
     }
 }

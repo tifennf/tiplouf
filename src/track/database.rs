@@ -1,5 +1,5 @@
 mod document;
 mod manager;
 
-pub use document::{Track, TrackJson};
+pub use document::{Track};
 pub use manager::TrackManager;

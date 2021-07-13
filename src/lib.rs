@@ -12,6 +12,7 @@ use actix_web::{
 use mongodb::Client;
 
 const ADDR: &str = "localhost:3000";
+const DB: &str = "tiplouf";
 
 pub async fn start(client: Client) -> std::io::Result<()> {
     println!("Server running on port 3000");
@@ -23,7 +24,7 @@ pub async fn start(client: Client) -> std::io::Result<()> {
             .wrap(cors)
             .wrap(Logger::default())
             .wrap(NormalizePath::default())
-            .data(client.clone())
+            .data(client.clone().database(DB))
             .configure(route::config)
             .service(Files::new("/", "./public/root/").index_file("index.html"))
     })

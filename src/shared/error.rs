@@ -4,6 +4,7 @@ use super::ApiResponse;
 use actix_web::http::StatusCode;
 use derive_more::Display;
 use log::error;
+use mongodb::bson::document::ValueAccessError;
 use serde::Serialize;
 // use std::convert;
 
@@ -95,6 +96,12 @@ impl From<mongodb::bson::de::Error> for ApiError {
 }
 impl From<mongodb::bson::ser::Error> for ApiError {
     fn from(err: mongodb::bson::ser::Error) -> Self {
+        ApiError::InternalServerError(err.to_string())
+    }
+}
+
+impl From<ValueAccessError> for ApiError {
+    fn from(err: ValueAccessError) -> Self {
         ApiError::InternalServerError(err.to_string())
     }
 }
