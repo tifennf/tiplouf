@@ -1,6 +1,6 @@
 use futures::StreamExt;
 use futures::TryStreamExt;
-use futures::stream::{self, StreamExt};
+// use futures::stream::{self, StreamExt};
 use mongodb::{Collection, Database, bson::{self, doc, oid::ObjectId, Document}};
 
 use crate::{playlist::{schema::PlaylistJson, database::{Playlist, PlaylistDraft}}, shared::{ApiError}};
@@ -10,12 +10,11 @@ use crate::{playlist::{schema::PlaylistJson, database::{Playlist, PlaylistDraft}
 
 pub struct PlaylistManager {
     p_collection: Collection,
-    t_collection: Collection,
 }
 
 impl PlaylistManager {
-    pub fn init(p_collection: Collection, t_collection: Collection) -> PlaylistManager {
-        PlaylistManager { p_collection, t_collection }
+    pub fn init(p_collection: Collection) -> PlaylistManager {
+        PlaylistManager { p_collection }
     }
     
     //need fix about cursor

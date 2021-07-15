@@ -1,8 +1,9 @@
-use mongodb::{Collection, Database, bson::{self, doc, oid::ObjectId}};
+use futures::{StreamExt, TryStreamExt};
+use mongodb::{Collection, Database, bson::{self, Document, doc, oid::ObjectId}};
 
 use crate::{shared::ApiError, track::{TrackRequest, schema::TrackJson}};
 
-use super::{Track};
+use super::{Track, document::TrackDraft};
 
 pub struct TrackManager {
     collection: Collection,
@@ -25,7 +26,7 @@ impl TrackManager {
         Ok(track)
     }
 
-    pub async fn add_one(&self, track: TrackRequest) -> Result<Option<TrackJson>, ApiError> {
+    pub async fn add_one(&self, track: TrackDraft) -> Result<Option<TrackJson>, ApiError> {
         let doc = bson::to_document(&track)?;
         let result = self.collection.insert_one(doc, None).await?;
         
@@ -48,6 +49,17 @@ impl TrackManager {
 
         Ok(track)
     }
+
+    pub async fn get_tracklist(&self, p_id: ObjectId) -> Result<Vec<TrackJson>, ApiError> {
+        let tracklist = self.collection.find(doc! { "p_id": p_id }, None).await?;
+        let mut tracklist = tracklist.try_collect::<Vec<Document>>().await?;
+
+        let tracklist = tracklist.drain(0..).map(|doc| Ok(bson::from_document::<Track>(doc)?.to_json())).collect::<Result<Vec<TrackJson>, ApiError>>()?;
+        
+        Ok(tracklist)
+    }
+
+    // pub async fn add_tracklist(&self, tracklist: Vec)
 } 
 
 
