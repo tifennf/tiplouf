@@ -1,13 +1,12 @@
+use std::collections::HashSet;
 
-const COLLECTION: &str = "playlist";
-
-use crate::{playlist::{database::PlaylistManager, self}, shared::{ApiError, ApiResponse, utils}, track::{self, database::TrackManager}};
+use crate::{playlist::{database::PlaylistManager, self}, shared::{ApiError, ApiResponse, utils}, track::database::{TrackDraft}};
 use actix_web::{http::StatusCode, web, HttpResponse, Result};
 use mongodb::Database;
 
 //get /playlist/
 pub async fn get_all(database: web::Data<Database>) -> Result<HttpResponse> {
-    let manager = PlaylistManager::init(database.collection(COLLECTION));
+    let manager = PlaylistManager::init(&database);
     let p_list = manager.get_all().await?;
     
     Ok(ApiResponse::success(Some(p_list), StatusCode::OK))
@@ -18,12 +17,12 @@ pub async fn get_one(
     database: web::Data<Database>,
     web::Path(id): web::Path<String>,
 ) -> Result<HttpResponse> {
-    let id = utils::validate_p_id(id)?;
+    let id = utils::validate_p_id(&id)?;
 
-    let manager = PlaylistManager::init(database.collection(COLLECTION));
+    let manager = PlaylistManager::init(&database);
     let playlist = manager.get_one(id).await?;
 
-    Ok(ApiResponse::success(Some(playlist), StatusCode::OK))
+    Ok(ApiResponse::success(playlist, StatusCode::OK))
 }
 
 //post /playlist/
@@ -31,9 +30,9 @@ pub async fn create_one(
     database: web::Data<Database>,
     body: web::Json<playlist::PlaylistRequest>,
 ) -> Result<HttpResponse> {
-    let playlist = body.0.draft();
+    let playlist = body.0;
 
-    let manager = PlaylistManager::init(database.collection(COLLECTION));
+    let manager = PlaylistManager::init(&database);
     let playlist = manager.add_one(playlist).await?;
 
     Ok(ApiResponse::success(Some(playlist), StatusCode::CREATED))
@@ -44,54 +43,38 @@ pub async fn delete_one(
     database: web::Data<Database>,
     web::Path(id): web::Path<String>,
 ) -> Result<HttpResponse, ApiError> {
-    let id = utils::validate_p_id(id)?;
+    let id = utils::validate_p_id(&id)?;
 
-    let manager = PlaylistManager::init(database.collection(COLLECTION));
+    let manager = PlaylistManager::init(&database);
     let playlist = manager.remove_one(id).await?;
 
     Ok(ApiResponse::success(Some(playlist), StatusCode::ACCEPTED))
 }
 
+pub async fn tracklist_add(
+    database: web::Data<Database>,
+    web::Path(id): web::Path<String>,
+    body: web::Json<HashSet<String>>
+) -> Result<HttpResponse> {
+    let id = utils::validate_p_id(&id)?;
+    let tracklist = body.0.into_iter().map(|url| TrackDraft::new(url, id.clone())).collect();
 
-// // GET /playlist/{p_id}/track/{t_id}
-// pub async fn get_track(
-//     Database: web::Data<Database>,
-//     web::Path((p_id, t_id)): web::Path<(String, String)>,
-// ) -> Result<HttpResponse> {
-//     let (p_id, t_id) = utils::validate_id_playlist_track(p_id, t_id)?;
-//     let manager = TrackManager::init(Database.database(DB).collection(COLLECTION), p_id);
+    let manager = PlaylistManager::init(&database);
 
-//     let track = manager.get_one(t_id).await?;
+    let playlist = manager.add_track(id, tracklist).await?;
 
-//     Ok(ApiResponse::success(Some(track), StatusCode::OK))
-// }
+    Ok(ApiResponse::success(Some(playlist), StatusCode::CREATED))
+}
+pub async fn tracklist_remove(
+    database: web::Data<Database>,
+    web::Path(id): web::Path<String>,
+    body: web::Json<HashSet<String>>
+) -> Result<HttpResponse> {
+    let id = utils::validate_p_id(&id)?;
+    let id_list = body.0;
+    let manager = PlaylistManager::init(&database);
 
-// // POST /playlist/{p_id}/track
-// pub async fn create_track(
-//     Database: web::Data<Database>,
-//     web::Path(id): web::Path<String>,
-//     body: web::Json<track::TrackRequest>,
-// ) -> Result<HttpResponse> {
-//     let (id, track) = (
-//         utils::validate_t_id(id)?,
-//         utils::validate_track(body.0)?,
-//     );
+    let playlist = manager.remove_track(id, id_list).await?;
 
-//     let manager = TrackManager::init(Database.database(DB).collection(COLLECTION), id);
-//     let playlist = manager.add_one(track).await?;
-
-//     Ok(ApiResponse::success(Some(playlist), StatusCode::CREATED))
-// }
-
-// // DELETE /playlist/{p_id}/track/{t_id}
-// pub async fn delete_track(
-//     Database: web::Data<Database>,
-//     web::Path((p_id, t_id)): web::Path<(String, String)>,
-// ) -> Result<HttpResponse> {
-//     let (p_id, t_id) = utils::validate_id_playlist_track(p_id, t_id)?;
-
-//     let manager = TrackManager::init(Database.database(DB).collection(COLLECTION), p_id);
-//     let playlist = manager.remove_one(t_id).await?;
-
-//     Ok(ApiResponse::success(Some(playlist), StatusCode::ACCEPTED))
-// }
+    Ok(ApiResponse::success(Some(playlist), StatusCode::ACCEPTED))
+}

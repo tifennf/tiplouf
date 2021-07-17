@@ -1,31 +1,30 @@
 use actix_web::web;
 
-use super::handler as playlist;
+use super::handler;
 
 pub enum Ressource {
     Playlist,
     Track,
 }
 
-// /playlist/
+// /handler/
 pub fn scope(cfg: &mut web::ServiceConfig) {
     cfg.service(
         web::resource("")
-            .route(web::get().to(playlist::get_all))
-            .route(web::post().to(playlist::create_one)),
+            .route(web::get().to(handler::get_all))
+            .route(web::post().to(handler::create_one)),
     );
 
     cfg.service(
         web::resource("/{id}/")
-            .route(web::get().to(playlist::get_one))
-            .route(web::delete().to(playlist::delete_one)),
+            .route(web::get().to(handler::get_one))
+            .route(web::delete().to(handler::delete_one)),
     );
 
-    // cfg.service(web::resource("/{id}/track/").route(web::post().to(track::create_track)));
+    cfg.service(web::resource("/{id}/track/").route(web::post().to(handler::tracklist_add)));
 
-    // cfg.service(
-    //     web::resource("/{id}/track/{track_id}/")
-    //         .route(web::delete().to(track::delete_track))
-    //         .route(web::get().to(track::get_track)),
-    // );
+    cfg.service(
+        web::resource("/{id}/track/{track_id}/")
+            .route(web::delete().to(handler::tracklist_remove))
+    );
 }

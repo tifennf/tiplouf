@@ -9,6 +9,13 @@ pub struct TrackDraft {
 }
 
 impl TrackDraft {
+    pub fn new(url: String, p_id: ObjectId) -> TrackDraft {
+        TrackDraft {
+            url,
+            p_id,
+        }
+    }
+
     pub fn to_json(self, id: String) -> TrackJson {
         let p_id = self.p_id.to_string();
 

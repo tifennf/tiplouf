@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 use super::database::TrackDraft;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct TrackRequest {
     url: String,
 }

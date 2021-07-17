@@ -1,8 +1,10 @@
 use std::collections::HashSet;
 
-use crate::{playlist::database as db, track::TrackJson};
-use mongodb::bson::{doc, oid::ObjectId, Document};
+use crate::track::TrackJson;
+use mongodb::bson::doc;
 use serde::{Deserialize, Serialize};
+
+use super::database::PlaylistDraft;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct PlaylistRequest {
@@ -11,29 +13,22 @@ pub struct PlaylistRequest {
 }
 
 impl PlaylistRequest {
-    pub fn draft(self) -> db::PlaylistDraft {
-        let tracklist = self
-            .tracklist
-            .iter()
-            .map(|track| {
-                doc! {
-                    "url": track,
-                }
-            })
-            .collect::<Vec<Document>>();
-        let trackcount = tracklist.len() as i64;
-
-        db::PlaylistDraft {
-            tracklist,
+    pub fn to_draft(self) -> ( HashSet<String>, PlaylistDraft ) {
+        let trackcount = self.tracklist.len() as i64;
+        
+        let draft = PlaylistDraft {
             trackcount,
             tag: self.tag,
-        }
+        };
+
+        ( self.tracklist, draft )
+        
     }
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct PlaylistJson {
-    pub tracklist: Vec<Option<TrackJson>>,
+    pub tracklist: Vec<TrackJson>,
     pub trackcount: i64,
     pub tag: Option<String>,
     pub id: String,
