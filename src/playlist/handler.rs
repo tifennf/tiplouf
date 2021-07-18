@@ -1,6 +1,10 @@
 use std::collections::HashSet;
 
-use crate::{playlist::{database::PlaylistManager, self}, shared::{ApiError, ApiResponse, utils}, track::database::{TrackDraft}};
+use crate::{
+    playlist::{self, database::PlaylistManager},
+    shared::{utils, ApiError, ApiResponse},
+    track::database::TrackDraft,
+};
 use actix_web::{http::StatusCode, web, HttpResponse, Result};
 use mongodb::Database;
 
@@ -8,7 +12,7 @@ use mongodb::Database;
 pub async fn get_all(database: web::Data<Database>) -> Result<HttpResponse> {
     let manager = PlaylistManager::init(&database);
     let p_list = manager.get_all().await?;
-    
+
     Ok(ApiResponse::success(Some(p_list), StatusCode::OK))
 }
 
@@ -54,10 +58,14 @@ pub async fn delete_one(
 pub async fn tracklist_add(
     database: web::Data<Database>,
     web::Path(id): web::Path<String>,
-    body: web::Json<HashSet<String>>
+    body: web::Json<HashSet<String>>,
 ) -> Result<HttpResponse> {
     let id = utils::validate_p_id(&id)?;
-    let tracklist = body.0.into_iter().map(|url| TrackDraft::new(url, id.clone())).collect();
+    let tracklist = body
+        .0
+        .into_iter()
+        .map(|url| TrackDraft::new(url, id.clone()))
+        .collect();
 
     let manager = PlaylistManager::init(&database);
 
@@ -68,7 +76,7 @@ pub async fn tracklist_add(
 pub async fn tracklist_remove(
     database: web::Data<Database>,
     web::Path(id): web::Path<String>,
-    body: web::Json<HashSet<String>>
+    body: web::Json<HashSet<String>>,
 ) -> Result<HttpResponse> {
     let id = utils::validate_p_id(&id)?;
     let id_list = body.0;

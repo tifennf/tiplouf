@@ -1,5 +1,5 @@
-mod schema;
 pub mod database;
+mod schema;
 
-pub use schema::{TrackRequest, TrackJson};
 pub use database::TrackManager;
+pub use schema::{TrackJson, TrackRequest};

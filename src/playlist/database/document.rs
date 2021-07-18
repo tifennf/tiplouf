@@ -1,7 +1,7 @@
-use mongodb::{Collection, Database, bson::{self, doc, oid::ObjectId, Document}};
+use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 
-use crate::{playlist::schema::PlaylistJson, shared::ApiError, track::{self, TrackJson, TrackManager}};
+use crate::{playlist::schema::PlaylistJson, track::TrackJson};
 
 #[derive(Serialize, Deserialize)]
 pub struct PlaylistDraft {
@@ -10,17 +10,15 @@ pub struct PlaylistDraft {
 }
 
 impl PlaylistDraft {
-    pub fn to_json(self, tracklist: Vec<TrackJson>, id: &ObjectId) -> PlaylistJson {
+    pub fn into_json(self, tracklist: Vec<TrackJson>, id: &ObjectId) -> PlaylistJson {
         let id = id.to_string();
 
-        let playlist = PlaylistJson {
+        PlaylistJson {
             tracklist,
             trackcount: self.trackcount,
             tag: self.tag,
             id,
-        };
-
-        playlist
+        }
     }
 }
 
@@ -39,25 +37,12 @@ pub struct Playlist {
 }
 
 impl Playlist {
-    pub fn to_json(self, tracklist: Vec<TrackJson>) -> PlaylistJson {
-        let playlist = PlaylistJson {
+    pub fn into_json(self, tracklist: Vec<TrackJson>) -> PlaylistJson {
+        PlaylistJson {
             tracklist,
             trackcount: self.trackcount,
             tag: self.tag,
             id: self.id.to_string(),
-        };
-
-        playlist
+        }
     }
 }
-
-// async fn map_tracklist(tracklist: Vec<TrackRef>, t_collection: &Collection) -> Result<Vec<Option<TrackJson>>, ApiError> {
-//     let manager = TrackManager::init(t_collection.clone()).await;
-//     let mut t_list = Vec::new();
-//     for track in tracklist.iter() {
-//         t_list.push(manager.get_one(track.id.clone()).await?);
-//     }
-
-//     Ok(t_list)
-// }
-

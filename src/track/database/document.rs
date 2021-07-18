@@ -10,13 +10,10 @@ pub struct TrackDraft {
 
 impl TrackDraft {
     pub fn new(url: String, p_id: ObjectId) -> TrackDraft {
-        TrackDraft {
-            url,
-            p_id,
-        }
+        TrackDraft { url, p_id }
     }
 
-    pub fn to_json(self, id: String) -> TrackJson {
+    pub fn into_json(self, id: String) -> TrackJson {
         let p_id = self.p_id.to_string();
 
         TrackJson {
@@ -36,8 +33,7 @@ pub struct Track {
 }
 
 impl Track {
-    pub fn to_json(self) -> TrackJson {
-
+    pub fn into_json(self) -> TrackJson {
         let p_id = self.p_id.to_string();
         let id = self.id.to_string();
 

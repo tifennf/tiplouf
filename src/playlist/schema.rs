@@ -13,16 +13,15 @@ pub struct PlaylistRequest {
 }
 
 impl PlaylistRequest {
-    pub fn to_draft(self) -> ( HashSet<String>, PlaylistDraft ) {
+    pub fn into_draft(self) -> (HashSet<String>, PlaylistDraft) {
         let trackcount = self.tracklist.len() as i64;
-        
+
         let draft = PlaylistDraft {
             trackcount,
             tag: self.tag,
         };
 
-        ( self.tracklist, draft )
-        
+        (self.tracklist, draft)
     }
 }
 
@@ -33,5 +32,3 @@ pub struct PlaylistJson {
     pub tag: Option<String>,
     pub id: String,
 }
-
-

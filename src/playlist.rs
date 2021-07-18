@@ -1,8 +1,8 @@
 mod database;
 pub mod error;
 mod handler;
-mod scope;
 pub mod schema;
+mod scope;
 
 pub use scope::{scope, Ressource};
 

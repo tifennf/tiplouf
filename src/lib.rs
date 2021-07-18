@@ -32,3 +32,6 @@ pub async fn start(client: Client) -> std::io::Result<()> {
     .run()
     .await
 }
+
+#[cfg(test)]
+mod test {}

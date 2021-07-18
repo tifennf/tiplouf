@@ -1,9 +1,13 @@
-use futures::{TryStreamExt};
-use mongodb::{Collection, Database, bson::{self, Document, doc, oid::ObjectId}, results::InsertManyResult};
+use futures::TryStreamExt;
+use mongodb::{
+    bson::{self, doc, oid::ObjectId, Document},
+    results::InsertManyResult,
+    Collection, Database,
+};
 
 use crate::{shared::ApiError, track::schema::TrackJson};
 
-use super::{Track, document::TrackDraft};
+use super::{document::TrackDraft, Track};
 
 pub struct TrackManager {
     collection: Collection,
@@ -13,39 +17,36 @@ impl TrackManager {
     pub fn init(database: &Database) -> TrackManager {
         let collection = database.collection("track");
 
-        TrackManager {
-            collection,
-        }
+        TrackManager { collection }
     }
 
     pub async fn get_one(&self, id: ObjectId) -> Result<Option<TrackJson>, ApiError> {
         let track = self.collection.find_one(doc! {"_id": id}, None).await?;
         let track = match track {
-            Some(track) => Some(bson::from_document::<Track>(track)?.to_json()),
+            Some(track) => Some(bson::from_document::<Track>(track)?.into_json()),
             None => None,
         };
-        
+
         Ok(track)
     }
 
     pub async fn add_one(&self, track: TrackDraft) -> Result<Option<TrackJson>, ApiError> {
         let doc = bson::to_document(&track)?;
         let result = self.collection.insert_one(doc, None).await?;
-        
-        let id = result.inserted_id.as_object_id().map(|id| id.to_string());
 
-        let track = match id {
-            Some(id) => Some(track.to_json(id)),
-            None => None,
-        };
+        let id = result.inserted_id.as_object_id().map(|id| id.to_string());
+        let track = id.map(|id| track.into_json(id));
 
         Ok(track)
     }
 
     pub async fn remove_one(&self, id: ObjectId) -> Result<Option<TrackJson>, ApiError> {
-        let track = self.collection.find_one_and_delete(doc!{ "_id": id }, None).await?;
+        let track = self
+            .collection
+            .find_one_and_delete(doc! { "_id": id }, None)
+            .await?;
         let track = match track {
-            Some(track) => Some(bson::from_document::<Track>(track)?.to_json()),
+            Some(track) => Some(bson::from_document::<Track>(track)?.into_json()),
             None => None,
         };
 
@@ -56,69 +57,81 @@ impl TrackManager {
         let tracklist = self.collection.find(doc! { "p_id": p_id }, None).await?;
         let mut tracklist = tracklist.try_collect::<Vec<Document>>().await?;
 
-        let tracklist = tracklist.drain(0..).map(|doc| Ok(bson::from_document::<Track>(doc)?.to_json())).collect::<Result<Vec<TrackJson>, ApiError>>()?;
-        
+        let tracklist = tracklist
+            .drain(0..)
+            .map(|doc| Ok(bson::from_document::<Track>(doc)?.into_json()))
+            .collect::<Result<Vec<TrackJson>, ApiError>>()?;
+
         Ok(tracklist)
     }
 
-    pub async fn add_tracklist(&self, mut tracklist: Vec<TrackDraft>) -> Result<Vec<TrackJson>, ApiError>{
-
-        let tracklist_as_doc = tracklist.iter().map(|track| Ok(bson::to_document(track)?)).collect::<Result<Vec<Document>, ApiError>>()?;
+    pub async fn add_tracklist(
+        &self,
+        mut tracklist: Vec<TrackDraft>,
+    ) -> Result<Vec<TrackJson>, ApiError> {
+        let tracklist_as_doc = tracklist
+            .iter()
+            .map(|track| Ok(bson::to_document(track)?))
+            .collect::<Result<Vec<Document>, ApiError>>()?;
         let result = self.collection.insert_many(tracklist_as_doc, None).await?;
 
         let id_list = result.inserted_ids;
 
-        let tracklist = tracklist.drain(0..).zip(id_list.values()).map(|(track, id)| {
-            let id = id.as_object_id()?.to_string();
+        let tracklist = tracklist
+            .drain(0..)
+            .zip(id_list.values())
+            .map(|(track, id)| {
+                let id = id.as_object_id()?.to_string();
 
-            Some(track.to_json(id))
-        }).collect::<Option<Vec<TrackJson>>>().ok_or(ApiError::InternalServerError("Could not add tracks".to_string()))?;
+                Some(track.into_json(id))
+            })
+            .collect::<Option<Vec<TrackJson>>>()
+            .ok_or_else(|| ApiError::InternalServerError("Could not add tracks".to_string()))?;
 
         Ok(tracklist)
     }
-    
+
     pub async fn remove_tracklist(&self, p_id: ObjectId) -> Result<Vec<TrackJson>, ApiError> {
         let query = doc! {"p_id": p_id.clone()};
         let tracklist = self.get_tracklist(p_id).await?;
         self.collection.delete_many(query, None).await?;
-        
+
         Ok(tracklist)
     }
 
-
-    pub async fn add_many_track(&self, tracklist: Vec<TrackDraft>) -> Result<InsertManyResult, ApiError>{
-    
-        let tracklist = tracklist.iter().map(|track| Ok(bson::to_document(track)?)).collect::<Result<Vec<Document>, ApiError>>()?;
+    pub async fn add_many_track(
+        &self,
+        tracklist: Vec<TrackDraft>,
+    ) -> Result<InsertManyResult, ApiError> {
+        let tracklist = tracklist
+            .iter()
+            .map(|track| Ok(bson::to_document(track)?))
+            .collect::<Result<Vec<Document>, ApiError>>()?;
         let result = self.collection.insert_many(tracklist, None).await?;
 
         Ok(result)
     }
-
-    
-} 
-
-
-
+}
 
 // impl TrackManager {
-    //     pub fn init(collection: Collection, playlist_id: ObjectId) -> TrackManager {
-        //         TrackManager {
-            //             collection,
-            //             playlist_id,
-            //         }
-            //     }
-            
-            //     pub async fn get_one(&self, track_id: ObjectId) -> Result<TrackJson, ApiError> {
+//     pub fn init(collection: Collection, playlist_id: ObjectId) -> TrackManager {
+//         TrackManager {
+//             collection,
+//             playlist_id,
+//         }
+//     }
+
+//     pub async fn get_one(&self, track_id: ObjectId) -> Result<TrackJson, ApiError> {
 //         let filter = doc! { "_id": self.playlist_id.clone()};
-    
+
 //         let result = self.collection.find_one(filter, None).await?;
 //         let playlist = parse_playlist(result)?;
-    
+
 //         let track = playlist
 //             .tracklist
 //             .iter()
 //             .find(|track| track.track_id == track_id.to_string());
-    
+
 //         match track.cloned() {
 //             Some(track) => Ok(track),
 //             None => Err(ApiError::ValidationError {
@@ -126,7 +139,7 @@ impl TrackManager {
 //             }),
 //         }
 //     }
-    
+
 //     pub async fn add_one(&self, track: Document) -> Result<TrackJson, ApiError> {
 //         let add_track = doc! {
 //             "$push": {
@@ -174,7 +187,6 @@ impl TrackManager {
 
 //         parse_playlist(result)
 //     }
-
 
 //     //return playlist with updated tracklist and count
 //     async fn tracklist_update(&self, count_update: Document) -> Result<Option<Document>, ApiError> {

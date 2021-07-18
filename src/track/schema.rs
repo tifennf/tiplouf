@@ -9,14 +9,13 @@ pub struct TrackRequest {
 }
 
 impl TrackRequest {
-    pub fn to_draft(self, p_id: ObjectId) -> TrackDraft {
+    pub fn into_draft(self, p_id: ObjectId) -> TrackDraft {
         TrackDraft {
             url: self.url,
             p_id,
         }
     }
 }
-
 
 #[derive(Serialize, Deserialize)]
 pub struct TrackJson {
