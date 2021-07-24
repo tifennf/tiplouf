@@ -33,5 +33,41 @@ pub async fn start(client: Client) -> std::io::Result<()> {
     .await
 }
 
-#[cfg(test)]
-mod test {}
+// i prefer not using actix test module, but i let that comment for notes
+// #[cfg(test)]
+// mod test {
+//     use super::*;
+//     use actix_web::{dev::ResponseBody, http::Method, test};
+
+//     #[actix_rt::test]
+//     async fn api_test() {
+//         let client = Client::with_uri_str("mongodb://127.0.0.1:27017/")
+//             .await
+//             .expect("failed to connect DB");
+
+//         let cors = Cors::permissive();
+
+//         let mut app = test::init_service(
+//             App::new()
+//                 .wrap(cors)
+//                 .wrap(Logger::default())
+//                 .wrap(NormalizePath::default())
+//                 .data(client.clone().database(DB))
+//                 .configure(route::config)
+//                 .service(Files::new("/", "./public/root/").index_file("index.html")),
+//         )
+//         .await;
+
+//         let get_playlist = test::TestRequest::get().uri("/playlist")
+//             .to_request();
+//         let get_playlist = test::call_service(&mut app, get_playlist).await;
+//         assert!(get_playlist.status().is_success());
+
+//         let post_playlist = test::TestRequest::post().uri("/playlist")
+//             .to_request();
+//         let post_playlist = test::call_service(&mut app, post_playlist).await;
+//         assert!(post_playlist.status().is_success());
+
+//     }
+
+// }

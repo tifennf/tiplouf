@@ -1,6 +1,6 @@
 mod database;
 pub mod error;
-mod handler;
+pub mod handler;
 pub mod schema;
 mod scope;
 

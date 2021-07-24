@@ -144,16 +144,37 @@ impl PlaylistManager {
         p_id: ObjectId,
         id_list: HashSet<String>,
     ) -> Result<PlaylistJson, ApiError> {
+        let mut count = 0;
+
         for id in id_list {
             let id = utils::validate_t_id(&id)?;
 
             self.track_manager.remove_one(id).await?;
+
+            count += 1;
         }
 
-        let playlist = self.get_one(p_id).await?.ok_or_else(|| {
-            ApiError::InternalServerError("Could not update playlist".to_string())
-        })?;
+        let query = doc! {"_id": p_id.clone()};
+        let update = doc! {
+            "$inc": {
+                "trackcount": -count,
+            }
+        };
+        let options = FindOneAndUpdateOptions::builder()
+            .return_document(ReturnDocument::After)
+            .build();
 
-        Ok(playlist)
+        let playlist = self
+            .collection
+            .find_one_and_update(query, update, options)
+            .await?
+            .ok_or_else(|| {
+                ApiError::InternalServerError("Could not update playlist".to_string())
+            })?;
+
+        let playlist = bson::from_document::<Playlist>(playlist)?;
+        let tracklist = self.track_manager.get_tracklist(p_id).await?;
+
+        Ok(playlist.into_json(tracklist))
     }
 }

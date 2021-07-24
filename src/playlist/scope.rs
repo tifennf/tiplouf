@@ -21,9 +21,9 @@ pub fn scope(cfg: &mut web::ServiceConfig) {
             .route(web::delete().to(handler::delete_one)),
     );
 
-    cfg.service(web::resource("/{id}/track/").route(web::post().to(handler::tracklist_add)));
-
     cfg.service(
-        web::resource("/{id}/track/{track_id}/").route(web::delete().to(handler::tracklist_remove)),
+        web::resource("/{id}/track/")
+            .route(web::post().to(handler::tracklist_add))
+            .route(web::delete().to(handler::tracklist_remove)),
     );
 }
