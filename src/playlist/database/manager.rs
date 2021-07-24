@@ -1,8 +1,6 @@
 use std::collections::HashSet;
 
 use futures::StreamExt;
-use mongodb::options::FindOneAndUpdateOptions;
-use mongodb::options::ReturnDocument;
 use mongodb::{
     bson::{self, doc, oid::ObjectId},
     Collection, Database,
@@ -53,22 +51,21 @@ impl PlaylistManager {
         Ok(p_list)
     }
 
-    pub async fn get_one(&self, p_id: ObjectId) -> Result<Option<PlaylistJson>, ApiError> {
+    pub async fn get_one(&self, p_id: ObjectId) -> Result<PlaylistJson, ApiError> {
         let playlist = self
             .collection
             .find_one(doc! { "_id": p_id.clone()}, None)
             .await?;
         let tracklist = self.track_manager.get_tracklist(p_id).await?;
 
-        let playlist = playlist
+        playlist
             .map(|playlist| {
                 Ok::<PlaylistJson, ApiError>(
                     bson::from_document::<Playlist>(playlist)?.into_json(tracklist),
                 )
             })
-            .transpose()?;
-
-        Ok(playlist)
+            .transpose()?
+            .ok_or_else(|| ApiError::DatabaseError("Could not find playlist".into()))
     }
 
     pub async fn add_one(&self, playlist: PlaylistRequest) -> Result<PlaylistJson, ApiError> {
@@ -80,7 +77,7 @@ impl PlaylistManager {
         let p_id = result
             .inserted_id
             .as_object_id()
-            .ok_or_else(|| ApiError::InternalServerError("error".to_string()))?;
+            .ok_or_else(ApiError::id_not_generate)?;
         let tracklist = tracklist
             .into_iter()
             .map(|url| TrackDraft::new(url, p_id.clone()))
@@ -97,15 +94,19 @@ impl PlaylistManager {
     pub async fn remove_one(&self, p_id: ObjectId) -> Result<PlaylistJson, ApiError> {
         let tracklist = self.track_manager.remove_tracklist(p_id.clone()).await?;
 
-        let result = self
+        let playlist = self
             .collection
             .find_one_and_delete(doc! { "_id": p_id }, None)
             .await?;
 
-        match result {
-            Some(playlist) => Ok(bson::from_document::<Playlist>(playlist)?.into_json(tracklist)),
-            None => Err(ApiError::InternalServerError("delete error".to_string())),
-        }
+        playlist
+            .map(|playlist| {
+                Ok::<PlaylistJson, ApiError>(
+                    bson::from_document::<Playlist>(playlist)?.into_json(tracklist),
+                )
+            })
+            .transpose()?
+            .ok_or_else(|| ApiError::DatabaseError("Could not find deleted playlist".into()))
     }
 
     pub async fn add_track(
@@ -113,30 +114,9 @@ impl PlaylistManager {
         p_id: ObjectId,
         tracklist: Vec<TrackDraft>,
     ) -> Result<PlaylistJson, ApiError> {
-        let count = tracklist.len() as i64;
         self.track_manager.add_many_track(tracklist).await?;
 
-        let query = doc! {"_id": p_id.clone()};
-        let update = doc! {
-            "$inc": {
-                "trackcount": count,
-            }
-        };
-        let options = FindOneAndUpdateOptions::builder()
-            .return_document(ReturnDocument::After)
-            .build();
-
-        let playlist = self
-            .collection
-            .find_one_and_update(query, update, options)
-            .await?
-            .ok_or_else(|| {
-                ApiError::InternalServerError("Could not update playlist".to_string())
-            })?;
-        let playlist = bson::from_document::<Playlist>(playlist)?;
-
-        let tracklist = self.track_manager.get_tracklist(p_id).await?;
-        Ok(playlist.into_json(tracklist))
+        self.get_one(p_id).await
     }
 
     pub async fn remove_track(
@@ -144,37 +124,12 @@ impl PlaylistManager {
         p_id: ObjectId,
         id_list: HashSet<String>,
     ) -> Result<PlaylistJson, ApiError> {
-        let mut count = 0;
-
         for id in id_list {
             let id = utils::validate_t_id(&id)?;
 
             self.track_manager.remove_one(id).await?;
-
-            count += 1;
         }
 
-        let query = doc! {"_id": p_id.clone()};
-        let update = doc! {
-            "$inc": {
-                "trackcount": -count,
-            }
-        };
-        let options = FindOneAndUpdateOptions::builder()
-            .return_document(ReturnDocument::After)
-            .build();
-
-        let playlist = self
-            .collection
-            .find_one_and_update(query, update, options)
-            .await?
-            .ok_or_else(|| {
-                ApiError::InternalServerError("Could not update playlist".to_string())
-            })?;
-
-        let playlist = bson::from_document::<Playlist>(playlist)?;
-        let tracklist = self.track_manager.get_tracklist(p_id).await?;
-
-        Ok(playlist.into_json(tracklist))
+        self.get_one(p_id).await
     }
 }

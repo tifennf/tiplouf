@@ -4,9 +4,7 @@ use super::ApiResponse;
 use actix_web::http::StatusCode;
 use derive_more::Display;
 use log::error;
-use mongodb::bson::document::ValueAccessError;
 use serde::Serialize;
-// use std::convert;
 
 #[derive(Debug, Display, Serialize)]
 pub enum Ressource {
@@ -16,18 +14,20 @@ pub enum Ressource {
     Track,
 }
 
-#[derive(Debug, Display, Serialize)]
+#[derive(Debug, Display, Serialize, Clone)]
 pub enum ApiError {
     #[display(fmt = "Validation error: {}", info)]
     ValidationError { info: String },
     #[display(fmt = "Query error on ressource: {}\nInfo: {}", ressource, info)]
     QueryError { ressource: Ressource, info: String },
-    #[display(fmt = "Internal server error")]
+    #[display(fmt = "Internal server error: {}", self.0)]
     InternalServerError(String),
+    #[display(fmt = "Mongodb error: {}", self.0)]
+    DatabaseError(String),
 }
 
 impl ApiError {
-    pub fn id_not_generate() -> ApiError {
+    pub fn id_not_generate() -> mongodb::error::Error {
         io::Error::new(io::ErrorKind::InvalidData, "Id not generate").into()
     }
 }
@@ -43,24 +43,14 @@ impl Clone for Ressource {
         }
     }
 }
-impl Clone for ApiError {
-    fn clone(&self) -> Self {
-        match self {
-            ApiError::ValidationError { info } => ApiError::ValidationError { info: info.clone() },
-            ApiError::QueryError { ressource, info } => ApiError::QueryError {
-                ressource: ressource.clone(),
-                info: info.clone(),
-            },
-            ApiError::InternalServerError(err) => ApiError::InternalServerError(err.clone()),
-        }
-    }
-}
 
 impl actix_web::error::ResponseError for ApiError {
     fn error_response(&self) -> actix_web::HttpResponse {
         // let data = self.clone();
-
-        ApiResponse::fail(Some(self.clone()), self.status_code())
+        match self {
+            ApiError::ValidationError { info: _ } | ApiError::QueryError { ressource: _, info: _ } => ApiResponse::fail(Some(self.clone()), self.status_code()),
+            ApiError::InternalServerError(_) | ApiError::DatabaseError(_)=> ApiResponse::fail(None, self.status_code()),
+        }
     }
 
     fn status_code(&self) -> StatusCode {
@@ -70,22 +60,21 @@ impl actix_web::error::ResponseError for ApiError {
                 ressource: _,
                 info: _,
             } => StatusCode::NOT_FOUND,
-            ApiError::InternalServerError(err) => {
-                error!("DatabaseError: {}", err);
+            ApiError::InternalServerError(_) => {
+                error!("{}", &self);
+                StatusCode::INTERNAL_SERVER_ERROR
+            }
+            ApiError::DatabaseError(_) => {
+                error!("{}", &self);
                 StatusCode::INTERNAL_SERVER_ERROR
             }
         }
     }
 }
 
-impl From<io::Error> for ApiError {
-    fn from(err: io::Error) -> Self {
-        ApiError::InternalServerError(err.to_string())
-    }
-}
 impl From<mongodb::error::Error> for ApiError {
     fn from(err: mongodb::error::Error) -> Self {
-        ApiError::InternalServerError(err.to_string())
+        ApiError::DatabaseError(err.to_string())
     }
 }
 
@@ -96,12 +85,6 @@ impl From<mongodb::bson::de::Error> for ApiError {
 }
 impl From<mongodb::bson::ser::Error> for ApiError {
     fn from(err: mongodb::bson::ser::Error) -> Self {
-        ApiError::InternalServerError(err.to_string())
-    }
-}
-
-impl From<ValueAccessError> for ApiError {
-    fn from(err: ValueAccessError) -> Self {
         ApiError::InternalServerError(err.to_string())
     }
 }

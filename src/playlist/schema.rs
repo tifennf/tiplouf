@@ -14,12 +14,7 @@ pub struct PlaylistRequest {
 
 impl PlaylistRequest {
     pub fn into_draft(self) -> (HashSet<String>, PlaylistDraft) {
-        let trackcount = self.tracklist.len() as i64;
-
-        let draft = PlaylistDraft {
-            trackcount,
-            tag: self.tag,
-        };
+        let draft = PlaylistDraft { tag: self.tag };
 
         (self.tracklist, draft)
     }
@@ -28,7 +23,6 @@ impl PlaylistRequest {
 #[derive(Serialize, Deserialize)]
 pub struct PlaylistJson {
     pub tracklist: Vec<TrackJson>,
-    pub trackcount: i64,
     pub tag: Option<String>,
     pub id: String,
 }

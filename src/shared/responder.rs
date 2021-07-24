@@ -15,8 +15,6 @@ impl ApiResponse {
     }
 
     pub fn fail(data: Option<ApiError>, status_code: StatusCode) -> HttpResponse {
-        // let data = data.map(|data| data.to_string());
-
         HttpResponseBuilder::new(status_code).json(ApiFail {
             status: "fail".to_string(),
             data,

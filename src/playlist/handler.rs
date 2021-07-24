@@ -26,7 +26,7 @@ pub async fn get_one(
     let manager = PlaylistManager::init(&database);
     let playlist = manager.get_one(id).await?;
 
-    Ok(ApiResponse::success(playlist, StatusCode::OK))
+    Ok(ApiResponse::success(Some(playlist), StatusCode::OK))
 }
 
 //post /playlist/
