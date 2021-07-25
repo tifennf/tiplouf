@@ -26,3 +26,8 @@ pub struct PlaylistJson {
     pub tag: Option<String>,
     pub id: String,
 }
+
+#[derive(Deserialize)]
+pub struct Info {
+    pub tag: String,
+}

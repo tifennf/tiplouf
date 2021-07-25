@@ -5,8 +5,10 @@ use crate::{
     shared::{utils, ApiError, ApiResponse},
     track::database::TrackDraft,
 };
-use actix_web::{http::StatusCode, web, HttpResponse, Result};
+use actix_web::{HttpResponse, Result, http::StatusCode, web::{self, Query}};
 use mongodb::Database;
+
+use super::schema::Info;
 
 //get /playlist/
 pub async fn get_all(database: web::Data<Database>) -> Result<HttpResponse> {
@@ -15,6 +17,15 @@ pub async fn get_all(database: web::Data<Database>) -> Result<HttpResponse> {
 
     Ok(ApiResponse::success(Some(p_list), StatusCode::OK))
 }
+
+pub async fn tag_get_all(database: web::Data<Database>, query: Query<Info>) -> Result<HttpResponse> {
+    let manager = PlaylistManager::init(&database);
+
+    let p_list = manager.get_tag(query.tag.clone()).await?;
+
+    Ok(ApiResponse::success(Some(p_list), StatusCode::OK))
+}
+
 
 //get /playlist/{id}
 pub async fn get_one(
