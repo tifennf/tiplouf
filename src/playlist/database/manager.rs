@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use futures::StreamExt;
+// use futures::StreamExt;
 use mongodb::{Collection, Database, bson::{self, doc, oid::ObjectId}, options::FindOptions};
 
 use crate::playlist::PlaylistRequest;

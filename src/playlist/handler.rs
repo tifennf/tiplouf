@@ -48,6 +48,8 @@ pub async fn create_one(
     let playlist = body.0;
 
     let manager = PlaylistManager::init(&database);
+    
+
     let playlist = manager.add_one(playlist).await?;
 
     Ok(ApiResponse::success(Some(playlist), StatusCode::CREATED))
