@@ -1,7 +1,11 @@
 use std::collections::HashSet;
 
 // use futures::StreamExt;
-use mongodb::{Collection, Database, bson::{self, doc, oid::ObjectId}, options::FindOptions};
+use mongodb::{
+    bson::{self, doc, oid::ObjectId},
+    options::FindOptions,
+    Collection, Database,
+};
 
 use crate::playlist::PlaylistRequest;
 use crate::shared::utils;
@@ -18,9 +22,9 @@ pub struct PlaylistManager {
 }
 
 impl PlaylistManager {
-    pub fn init(database: &Database) -> PlaylistManager {
+    pub fn new(database: &Database) -> PlaylistManager {
         let collection = database.collection("playlist");
-        let track_manager = TrackManager::init(database);
+        let track_manager = TrackManager::new(database);
 
         PlaylistManager {
             collection,
@@ -30,7 +34,6 @@ impl PlaylistManager {
 
     //need fix about cursor
     pub async fn get_all(&self) -> Result<Vec<PlaylistJson>, ApiError> {
-
         let options = FindOptions::builder().limit(50).build();
         let mut cursor = self.collection.find(None, options).await?;
 
@@ -51,7 +54,7 @@ impl PlaylistManager {
                 )
             })
             .transpose()?
-            .ok_or_else(|| ApiError::DatabaseError("Could not find playlist".into()))
+            .ok_or_else(|| ApiError::ValidationError("Could not find playlist, invalid ID".into()))
     }
 
     pub async fn add_one(&self, playlist: PlaylistRequest) -> Result<PlaylistJson, ApiError> {
@@ -119,12 +122,7 @@ impl PlaylistManager {
         self.get_one(p_id).await
     }
 
-
-    pub async fn get_tag(
-        &self,
-        tag: String,
-    ) -> Result<Vec<PlaylistJson>, ApiError> {
-
+    pub async fn get_tag(&self, tag: String) -> Result<Vec<PlaylistJson>, ApiError> {
         let filter = doc! {
             "tag": tag
         };
@@ -132,6 +130,5 @@ impl PlaylistManager {
         let mut cursor = self.collection.find(filter, options).await?;
 
         utils::create_p_list(&self.track_manager, &mut cursor).await
-
     }
 }

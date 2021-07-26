@@ -16,6 +16,7 @@ futures = "0.3.15"
 actix-files = "0.5.0"
 derive_more = "0.99.16"
 log = "0.4.14"
+bcrypt = "0.10.1"
 
 
 [dev-dependencies]

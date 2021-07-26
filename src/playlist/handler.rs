@@ -5,27 +5,33 @@ use crate::{
     shared::{utils, ApiError, ApiResponse},
     track::database::TrackDraft,
 };
-use actix_web::{HttpResponse, Result, http::StatusCode, web::{self, Query}};
+use actix_web::{
+    http::StatusCode,
+    web::{self, Query},
+    HttpResponse, Result,
+};
 use mongodb::Database;
 
 use super::schema::Info;
 
 //get /playlist/
 pub async fn get_all(database: web::Data<Database>) -> Result<HttpResponse> {
-    let manager = PlaylistManager::init(&database);
+    let manager = PlaylistManager::new(&database);
     let p_list = manager.get_all().await?;
 
     Ok(ApiResponse::success(Some(p_list), StatusCode::OK))
 }
 
-pub async fn tag_get_all(database: web::Data<Database>, query: Query<Info>) -> Result<HttpResponse> {
-    let manager = PlaylistManager::init(&database);
+pub async fn tag_get_all(
+    database: web::Data<Database>,
+    query: Query<Info>,
+) -> Result<HttpResponse> {
+    let manager = PlaylistManager::new(&database);
 
     let p_list = manager.get_tag(query.tag.clone()).await?;
 
     Ok(ApiResponse::success(Some(p_list), StatusCode::OK))
 }
-
 
 //get /playlist/{id}
 pub async fn get_one(
@@ -34,7 +40,7 @@ pub async fn get_one(
 ) -> Result<HttpResponse> {
     let id = utils::validate_p_id(&id)?;
 
-    let manager = PlaylistManager::init(&database);
+    let manager = PlaylistManager::new(&database);
     let playlist = manager.get_one(id).await?;
 
     Ok(ApiResponse::success(Some(playlist), StatusCode::OK))
@@ -47,8 +53,7 @@ pub async fn create_one(
 ) -> Result<HttpResponse> {
     let playlist = body.0;
 
-    let manager = PlaylistManager::init(&database);
-    
+    let manager = PlaylistManager::new(&database);
 
     let playlist = manager.add_one(playlist).await?;
 
@@ -62,7 +67,7 @@ pub async fn delete_one(
 ) -> Result<HttpResponse, ApiError> {
     let id = utils::validate_p_id(&id)?;
 
-    let manager = PlaylistManager::init(&database);
+    let manager = PlaylistManager::new(&database);
     let playlist = manager.remove_one(id).await?;
 
     Ok(ApiResponse::success(Some(playlist), StatusCode::ACCEPTED))
@@ -80,7 +85,7 @@ pub async fn tracklist_add(
         .map(|url| TrackDraft::new(url, id.clone()))
         .collect();
 
-    let manager = PlaylistManager::init(&database);
+    let manager = PlaylistManager::new(&database);
 
     let playlist = manager.add_track(id, tracklist).await?;
 
@@ -93,7 +98,7 @@ pub async fn tracklist_remove(
 ) -> Result<HttpResponse> {
     let id = utils::validate_p_id(&id)?;
     let id_list = body.0;
-    let manager = PlaylistManager::init(&database);
+    let manager = PlaylistManager::new(&database);
 
     let playlist = manager.remove_track(id, id_list).await?;
 

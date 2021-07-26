@@ -14,7 +14,7 @@ pub struct TrackManager {
 }
 
 impl TrackManager {
-    pub fn init(database: &Database) -> TrackManager {
+    pub fn new(database: &Database) -> TrackManager {
         let collection = database.collection("track");
 
         TrackManager { collection }
