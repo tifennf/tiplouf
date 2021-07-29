@@ -18,13 +18,12 @@ pub struct UserDraft {
 impl UserDraft {
     pub fn add_id(self, id: ObjectId) -> User {
         User {
-			username: self.username,
-			password: self.password,
-			id,
-		}
+            username: self.username,
+            password: self.password,
+            id,
+        }
     }
 }
-
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct User {
@@ -45,5 +44,3 @@ impl Into<UserJson> for User {
         }
     }
 }
-
-

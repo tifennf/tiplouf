@@ -35,7 +35,6 @@ impl ApiSuccess<String> {
             data: "".to_string(),
         }
     }
-
 }
 
 #[derive(Serialize)]

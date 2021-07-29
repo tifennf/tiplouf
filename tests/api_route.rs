@@ -177,7 +177,6 @@ async fn delete_track() {
         .map(|t| t.id.clone())
         .collect::<HashSet<String>>();
 
-
     let res = client.delete(url).json(&id_list).send().await.unwrap();
 
     let status = res.status();

@@ -1,7 +1,11 @@
 use std::pin::Pin;
 
-use actix_web::{Error, dev::{Service, Transform, ServiceRequest, ServiceResponse}};
-use futures::{Future, future::{self, Ready}};
+use actix_web::{Error, HttpMessage, dev::{Service, Transform, ServiceRequest, ServiceResponse}, http, web::Data};
+use dashmap::DashMap;
+use futures::{Future, TryFutureExt, future::{self, Either, Ready}};
+use mongodb::bson::oid::ObjectId;
+
+use super::{ApiError, ApiResponse};
 
 
 pub struct SayHi;
@@ -48,22 +52,30 @@ where
 
     type Error = Error;
 
-    type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>>>>;
+    type Future = Either<S::Future, Ready<Result<Self::Response, Self::Error>>>;
 
     fn poll_ready(&mut self, ctx: &mut std::task::Context<'_>) -> std::task::Poll<Result<(), Self::Error>> {
         self.service.poll_ready(ctx)
     }
 
     fn call(&mut self, req: Self::Request) -> Self::Future {
-        println!("Hi from start. You requested: {}", req.path());
+        let state = req.app_data::<Data<DashMap<String, ObjectId>>>().unwrap();
 
-		let fut = self.service.call(req);
+        let session_id = req.cookie("session_id");
 
-		Box::pin(async move {
-			let res = fut.await?;
+        match session_id {
+            Some(cookie) if state.contains_key(cookie.value()) => {
+                println!("Login OK");
 
-			println!("Hi from response");
-			Ok(res)
-		})
+                Either::Left(self.service.call(req))
+            },
+            Some(_) | None =>{
+                println!("Login FAIL");
+                Either::Right(future::ok(req.into_response(
+                    ApiResponse::fail(Some(ApiError::ValidationError("You are not logged in".into())), http::StatusCode::UNAUTHORIZED).into_body()
+                )))
+            }
+        }
+
     }
 }
