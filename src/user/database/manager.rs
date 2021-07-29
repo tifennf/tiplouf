@@ -29,7 +29,11 @@ impl UserManager {
                     "_id": id,
                 }
             },
-            UserQuery::Identifier(user) => bson::to_document(&user)?,
+            UserQuery::Username(username) => {
+                doc! {
+                    "username": username,
+                }
+            },
         };
 
         let user = self.collection.find_one(filter, None).await?.ok_or_else(|| ApiError::QueryError(Ressource::User))?;

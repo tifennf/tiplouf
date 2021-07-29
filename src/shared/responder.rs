@@ -7,7 +7,7 @@ use super::ApiError;
 pub struct ApiResponse;
 
 impl ApiResponse {
-    pub fn success<T: Serialize>(data: Option<T>, status_code: StatusCode) -> HttpResponse {
+    pub fn success<T: Serialize>(data: T, status_code: StatusCode) -> HttpResponse {
         HttpResponseBuilder::new(status_code).json(ApiSuccess {
             status: "success".to_string(),
             data,
@@ -25,7 +25,17 @@ impl ApiResponse {
 #[derive(Serialize)]
 pub struct ApiSuccess<T> {
     status: String,
-    data: Option<T>,
+    data: T,
+}
+
+impl ApiSuccess<String> {
+    pub fn default() -> ApiSuccess<String> {
+        ApiSuccess {
+            status: "success".to_string(),
+            data: "".to_string(),
+        }
+    }
+
 }
 
 #[derive(Serialize)]

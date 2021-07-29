@@ -6,18 +6,19 @@ pub mod user;
 
 use actix_cors::Cors;
 use actix_files::Files;
-use actix_web::{
-    middleware::{Logger, NormalizePath},
-    App, HttpServer,
-};
-use mongodb::Client;
+use actix_web::{App, HttpServer, cookie::CookieJar, middleware::{Logger, NormalizePath}};
+use dashmap::DashMap;
+use mongodb::{Client, bson::oid::ObjectId};
+
 
 const ADDR: &str = "localhost:3000";
 const DB: &str = "tiplouf";
 
 pub async fn start(client: Client) -> std::io::Result<()> {
+    
+    let session_list: DashMap<String, ObjectId> = DashMap::new();
     println!("Server running on port 3000");
-
+    
     HttpServer::new(move || {
         let cors = Cors::permissive();
 
@@ -26,6 +27,7 @@ pub async fn start(client: Client) -> std::io::Result<()> {
             .wrap(Logger::default())
             .wrap(NormalizePath::default())
             .data(client.clone().database(DB))
+            .data(session_list.clone())
             .configure(route::config)
             .service(Files::new("/", "./public/root/").index_file("index.html"))
     })

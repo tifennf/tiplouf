@@ -5,7 +5,7 @@ use crate::user::schema::UserJson;
 
 pub enum UserQuery {
     Id(ObjectId),
-    Identifier(UserDraft),
+    Username(String),
 }
 
 //UserDraft has bcrypt password

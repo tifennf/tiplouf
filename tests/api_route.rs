@@ -19,7 +19,6 @@ struct ApiResponse<T> {
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 struct Playlist {
     tracklist: Vec<Track>,
-    trackcount: i64,
     tag: Option<String>,
     id: String,
 }
@@ -178,17 +177,13 @@ async fn delete_track() {
         .map(|t| t.id.clone())
         .collect::<HashSet<String>>();
 
-    let count1 = playlist1.data.trackcount;
 
     let res = client.delete(url).json(&id_list).send().await.unwrap();
 
     let status = res.status();
     let playlist2 = res.json::<ApiResponse<Playlist>>().await.unwrap();
 
-    let count2 = playlist2.data.trackcount;
-
     assert_eq!(status, StatusCode::ACCEPTED);
     assert_eq!(playlist2.status, "success");
     assert_ne!(playlist1, playlist2);
-    assert_ne!(count2 - id_list.len() as i64, count1);
 }
