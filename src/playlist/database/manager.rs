@@ -7,7 +7,7 @@ use mongodb::{
     Collection, Database,
 };
 
-use crate::playlist::PlaylistRequest;
+use crate::{playlist::PlaylistRequest, track::TrackJson};
 use crate::shared::utils;
 use crate::track::database::TrackDraft;
 use crate::track::TrackManager;
@@ -33,32 +33,38 @@ impl PlaylistManager {
     }
 
     //need fix about cursor
-    pub async fn get_all(&self) -> Result<Vec<PlaylistJson>, ApiError> {
-        let options = FindOptions::builder().limit(50).build();
-        let mut cursor = self.collection.find(None, options).await?;
+    pub async fn get_all(&self, user_id: ObjectId) -> Result<Vec<PlaylistJson>, ApiError> {
+        let filter = doc! {
+            "user_id": user_id,
+        };
+        // let options = FindOptions::builder().limit(50).build();
+        let mut cursor = self.collection.find(filter, None).await?;
 
         utils::create_p_list(&self.track_manager, &mut cursor).await
     }
 
-    pub async fn get_one(&self, p_id: ObjectId) -> Result<PlaylistJson, ApiError> {
+    pub async fn get_one(&self, user_id: ObjectId, p_id: ObjectId) -> Result<PlaylistJson, ApiError> {
+        let filter = doc! {
+            "user_id": user_id,
+            "_id": p_id.clone(),
+        };
+
         let playlist = self
             .collection
-            .find_one(doc! { "_id": p_id.clone()}, None)
+            .find_one(filter , None)
             .await?;
         let tracklist = self.track_manager.get_tracklist(p_id).await?;
 
-        playlist
-            .map(|playlist| {
+        playlist.ok_or_else(|| ApiError::ValidationError("Could not find playlist, invalid ID".into()))
+            .and_then(|playlist| {
                 Ok::<PlaylistJson, ApiError>(
                     bson::from_document::<Playlist>(playlist)?.into_json(tracklist),
                 )
-            })
-            .transpose()?
-            .ok_or_else(|| ApiError::ValidationError("Could not find playlist, invalid ID".into()))
+            })   
     }
 
-    pub async fn add_one(&self, playlist: PlaylistRequest) -> Result<PlaylistJson, ApiError> {
-        let (tracklist, playlist_draft) = playlist.into_draft();
+    pub async fn add_one(&self, user_id: ObjectId, playlist: PlaylistRequest) -> Result<PlaylistJson, ApiError> {
+        let (tracklist, playlist_draft) = playlist.into_draft(user_id);
 
         let playlist = bson::to_document(&playlist_draft)?;
         let result = self.collection.insert_one(playlist, None).await?;
@@ -80,46 +86,54 @@ impl PlaylistManager {
         Ok(playlist)
     }
 
-    pub async fn remove_one(&self, p_id: ObjectId) -> Result<PlaylistJson, ApiError> {
-        let tracklist = self.track_manager.remove_tracklist(p_id.clone()).await?;
+    pub async fn remove_one(&self, user_id: ObjectId, p_id: ObjectId) -> Result<PlaylistJson, ApiError> {
+        let filter = doc! {
+            "user_id": user_id,
+            "_id": p_id.clone(),
+        };
 
         let playlist = self
             .collection
-            .find_one_and_delete(doc! { "_id": p_id }, None)
-            .await?;
+            .find_one_and_delete(filter, None)
+            .await?.ok_or_else(|| ApiError::DatabaseError("Could not find deleted playlist".into()))?;
+        let tracklist = self.track_manager.remove_tracklist(p_id.clone()).await?;
 
-        playlist
-            .map(|playlist| {
-                Ok::<PlaylistJson, ApiError>(
-                    bson::from_document::<Playlist>(playlist)?.into_json(tracklist),
-                )
-            })
-            .transpose()?
-            .ok_or_else(|| ApiError::DatabaseError("Could not find deleted playlist".into()))
+        let playlist = bson::from_document::<Playlist>(playlist)?.into_json(tracklist);
+
+        Ok(playlist)
     }
 
     pub async fn add_track(
         &self,
+        user_id: ObjectId,
         p_id: ObjectId,
         tracklist: Vec<TrackDraft>,
     ) -> Result<PlaylistJson, ApiError> {
-        self.track_manager.add_many_track(tracklist).await?;
 
-        self.get_one(p_id).await
+        let mut playlist = self.get_one(user_id, p_id).await?;
+        self.track_manager.add_many_track(tracklist.clone()).await?;
+
+        playlist.tracklist = tracklist.iter().map(|track| track.clone().into_json()).chain(playlist.tracklist.into_iter()).collect::<Vec<TrackJson>>();
+
+        Ok(playlist)
     }
 
     pub async fn remove_track(
         &self,
+        user_id: ObjectId,
         p_id: ObjectId,
         id_list: HashSet<String>,
     ) -> Result<PlaylistJson, ApiError> {
-        for id in id_list {
-            let id = utils::validate_t_id(&id)?;
+        self.is_owner(user_id.clone(), p_id.clone()).await?;
 
-            self.track_manager.remove_one(id).await?;
+        for id  in id_list {
+            let id = utils::validate_t_id(&id)?;
+            
+            self.track_manager.remove_one(id.clone()).await?;
+
         }
 
-        self.get_one(p_id).await
+        self.get_one(user_id, p_id).await
     }
 
     pub async fn get_tag(&self, tag: String) -> Result<Vec<PlaylistJson>, ApiError> {
@@ -130,5 +144,19 @@ impl PlaylistManager {
         let mut cursor = self.collection.find(filter, options).await?;
 
         utils::create_p_list(&self.track_manager, &mut cursor).await
+    }
+
+    pub async fn is_owner(&self, user_id: ObjectId, p_id: ObjectId) -> Result<(), ApiError> {
+        let filter = doc! {
+            "user_id": user_id,
+            "_id": p_id,
+        };
+
+        self
+            .collection
+            .find_one(filter , None)
+            .await?;
+
+        Ok(())
     }
 }

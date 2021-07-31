@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use crate::track::TrackJson;
-use mongodb::bson::doc;
+use mongodb::bson::{doc, oid::ObjectId};
 use serde::{Deserialize, Serialize};
 
 use super::database::PlaylistDraft;
@@ -13,8 +13,8 @@ pub struct PlaylistRequest {
 }
 
 impl PlaylistRequest {
-    pub fn into_draft(self) -> (HashSet<String>, PlaylistDraft) {
-        let draft = PlaylistDraft { tag: self.tag };
+    pub fn into_draft(self, user_id: ObjectId) -> (HashSet<String>, PlaylistDraft) {
+        let draft = PlaylistDraft { tag: self.tag, user_id };
 
         (self.tracklist, draft)
     }

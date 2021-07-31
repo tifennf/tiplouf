@@ -3,12 +3,14 @@ use crate::{
     shared::ApiError,
     track::TrackManager,
 };
-use actix_web::Result;
+use actix_web::{HttpRequest, Result};
 use futures::StreamExt;
 use mongodb::{
     bson::{self, oid::ObjectId},
     Cursor,
 };
+
+use super::middleware::SessionInfo;
 
 pub fn validate_p_id(p_id: &str) -> Result<ObjectId, ApiError> {
     ObjectId::with_string(p_id)
@@ -19,6 +21,12 @@ pub fn validate_t_id(track_id: &str) -> Result<ObjectId, ApiError> {
     ObjectId::with_string(track_id).map_err(|_| {
         ApiError::ValidationError(playlist::error::Playlist::TrackInvalidId.to_string())
     })
+}
+
+pub fn extract_user_id(req: &HttpRequest) -> Result<ObjectId, ApiError> {
+    let user_id = req.extensions().get::<SessionInfo>().ok_or_else(|| ApiError::InternalServerError("Extension session is missing".into()))?.user_id.clone();
+
+    Ok(user_id)
 }
 
 pub async fn create_p_list(

@@ -17,19 +17,9 @@ impl TrackRequest {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct TrackJson {
     pub url: String,
     pub p_id: String,
-    pub id: String,
 }
 
-impl Clone for TrackJson {
-    fn clone(&self) -> Self {
-        TrackJson {
-            url: self.url.clone(),
-            p_id: self.p_id.clone(),
-            id: self.id.clone(),
-        }
-    }
-}

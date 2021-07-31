@@ -32,10 +32,7 @@ impl TrackManager {
         let doc = bson::to_document(&track)?;
         let result = self.collection.insert_one(doc, None).await?;
 
-        let id = result.inserted_id.as_object_id().map(|id| id.to_string());
-        let track = id.map(|id| track.into_json(id));
-
-        Ok(track)
+        Ok(Some(track.into_json()))
     }
 
     pub async fn remove_one(&self, id: ObjectId) -> Result<Option<TrackJson>, ApiError> {
@@ -58,6 +55,15 @@ impl TrackManager {
             .map(|doc| Ok(bson::from_document::<Track>(doc)?.into_json()))
             .collect::<Result<Vec<TrackJson>, ApiError>>()
     }
+    pub async fn get_tracklist_with_id(&self, p_id: ObjectId) -> Result<Vec<Track>, ApiError> {
+        let tracklist = self.collection.find(doc! { "p_id": p_id }, None).await?;
+        let tracklist = tracklist.try_collect::<Vec<Document>>().await?;
+
+        tracklist
+            .into_iter()
+            .map(|doc| Ok(bson::from_document::<Track>(doc)?))
+            .collect::<Result<Vec<Track>, ApiError>>()
+    }
 
     pub async fn add_tracklist(
         &self,
@@ -77,7 +83,7 @@ impl TrackManager {
             .map(|(track, id)| {
                 let id = id.as_object_id()?.to_string();
 
-                Some(track.into_json(id))
+                Some(track.into_json())
             })
             .collect::<Option<Vec<TrackJson>>>()
             .ok_or_else(ApiError::id_not_generate)?;

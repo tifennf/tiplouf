@@ -67,11 +67,9 @@ pub async fn login(
     let session_id = nanoid!();
     session_list.insert(session_id.clone(), user.id);
 
-	let x = session_list.get(&session_id).unwrap();
-	
+    let x = session_list.get(&session_id).unwrap();
 
-	println!("{:?}", x.key());
-
+    println!("{:?}", x.key());
 
     let session_id = Cookie::new("session_id".to_string(), session_id);
     let res = HttpResponseBuilder::new(StatusCode::ACCEPTED)

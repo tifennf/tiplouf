@@ -6,6 +6,7 @@ use crate::{playlist::schema::PlaylistJson, track::TrackJson};
 #[derive(Serialize, Deserialize)]
 pub struct PlaylistDraft {
     pub tag: Option<String>,
+    pub user_id: ObjectId,
 }
 
 impl PlaylistDraft {
