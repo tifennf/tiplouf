@@ -1,8 +1,8 @@
-use std::{collections::HashSet, ops::Deref};
+use std::{collections::HashSet};
 
 use crate::{
     playlist::{self, database::PlaylistManager},
-    shared::{middleware::SessionInfo, utils, ApiError, ApiResponse},
+    shared::{utils, ApiError, ApiResponse},
     track::database::TrackDraft,
 };
 use actix_web::{

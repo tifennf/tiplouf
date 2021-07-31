@@ -30,7 +30,7 @@ impl TrackManager {
 
     pub async fn add_one(&self, track: TrackDraft) -> Result<Option<TrackJson>, ApiError> {
         let doc = bson::to_document(&track)?;
-        let result = self.collection.insert_one(doc, None).await?;
+        let _result = self.collection.insert_one(doc, None).await?;
 
         Ok(Some(track.into_json()))
     }
@@ -81,7 +81,7 @@ impl TrackManager {
             .into_iter()
             .zip(id_list.values())
             .map(|(track, id)| {
-                let id = id.as_object_id()?.to_string();
+                let _id = id.as_object_id()?.to_string();
 
                 Some(track.into_json())
             })

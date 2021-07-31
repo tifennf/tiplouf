@@ -5,7 +5,6 @@ use mongodb::{
 
 use crate::{
     shared::{ApiError, Ressource},
-    user::schema::UserJson,
 };
 
 use super::document::{User, UserDraft, UserQuery};

@@ -2,7 +2,7 @@
 
 use reqwest::Response;
 use reqwest::StatusCode;
-use reqwest::cookie::Cookie;
+
 use reqwest::header;
 use serde_json::Value;
 use std::collections::HashSet;

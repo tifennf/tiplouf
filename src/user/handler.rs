@@ -6,7 +6,7 @@ use actix_web::{
     http::{self, StatusCode},
     web, HttpResponse,
 };
-use bcrypt::{verify, DEFAULT_COST};
+use bcrypt::{verify};
 use dashmap::DashMap;
 use mongodb::{bson::oid::ObjectId, Database};
 
@@ -16,7 +16,7 @@ use crate::{
 };
 
 use super::{
-    database::document::{User, UserDraft},
+    database::document::{UserDraft},
     schema::UserRequest,
 };
 
