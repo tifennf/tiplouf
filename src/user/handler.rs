@@ -1,4 +1,4 @@
-use std::convert::TryInto;
+use std::{convert::TryInto, sync::RwLock};
 
 use actix_web::{
     cookie::Cookie,
@@ -7,13 +7,11 @@ use actix_web::{
     web, HttpResponse,
 };
 use bcrypt::verify;
-use dashmap::DashMap;
+use bimap::BiHashMap;
 use mongodb::{bson::oid::ObjectId, Database};
+// use tokio::sync::RwLock;
 
-use crate::{
-    shared::{ApiError, ApiResponse, ApiSuccess},
-    user::database::{document::UserQuery, manager::UserManager},
-};
+use crate::{shared::{ApiError, ApiResponse, ApiSuccess}, user::database::{document::UserQuery, manager::UserManager}};
 
 use super::{database::document::UserDraft, schema::UserRequest};
 
@@ -41,7 +39,7 @@ pub async fn register(
 
 pub async fn login(
     database: web::Data<Database>,
-    session_list: web::Data<DashMap<String, ObjectId>>,
+    session_list: web::Data<RwLock<BiHashMap<String, ObjectId>>>,
     body: web::Json<UserRequest>,
 ) -> Result<HttpResponse> {
     let submit_password = body.0.password.clone();
@@ -62,11 +60,10 @@ pub async fn login(
     }
 
     let session_id = nanoid!();
-    session_list.insert(session_id.clone(), user.id);
 
-    let x = session_list.get(&session_id).unwrap();
+    let mut guard = session_list.write().map_err(|err| ApiError::InternalServerError(err.to_string()))?;
 
-    println!("{:?}", x.key());
+    guard.insert(session_id.clone(), user.id);
 
     let session_id = Cookie::new("session_id".to_string(), session_id);
     let res = HttpResponseBuilder::new(StatusCode::ACCEPTED)

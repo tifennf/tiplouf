@@ -227,13 +227,15 @@ async fn delete_track(client: &reqwest::Client, session_id: &str) {
         .unwrap();
 
     let id = &playlist1.data.p_id;
+
+
     let url = format!("{}/{}/track", url, id);
 
     let id_list = playlist1
         .data
         .tracklist
         .iter()
-        .map(|t| t.p_id.clone())
+        .map(|t| t.t_id.clone())
         .collect::<HashSet<String>>();
 
     let res = client

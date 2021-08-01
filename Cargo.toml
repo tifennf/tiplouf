@@ -19,6 +19,8 @@ log = "0.4.14"
 bcrypt = "0.10.1"
 dashmap = "4.0.2"
 nanoid = "0.4.0"
+tokio = { version = "1", features = ["sync"] }
+bimap = "0.6.1"
 
 [dev-dependencies]
 tokio = { version = "1", features = ["full"] }

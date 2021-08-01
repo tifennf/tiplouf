@@ -4,20 +4,25 @@ pub mod shared;
 pub mod track;
 pub mod user;
 
+use std::sync::RwLock;
+
 use actix_cors::Cors;
 use actix_files::Files;
 use actix_web::{
     middleware::{Logger, NormalizePath},
     web, App, HttpServer,
 };
-use dashmap::DashMap;
+use bimap::BiMap;
+use dashmap::{DashMap, DashSet};
 use mongodb::{bson::oid::ObjectId, Client};
+use shared::ApiError;
+// use tokio::sync::RwLock;
 
 const ADDR: &str = "localhost:3000";
 const DB: &str = "tiplouf";
 
 pub async fn start(client: Client) -> std::io::Result<()> {
-    let session_list: DashMap<String, ObjectId> = DashMap::new();
+    let session_list = RwLock::new(BiMap::<String, ObjectId>::new());
     let session_list = web::Data::new(session_list);
     println!("Server running on port 3000");
 
@@ -37,6 +42,40 @@ pub async fn start(client: Client) -> std::io::Result<()> {
     .run()
     .await
 }
+
+// pub struct SessionList {
+//     s_id_list: DashMap<String, ObjectId>,
+//     u_id_list: DashMap<ObjectId, String>,
+// }
+
+// impl SessionList {
+//     pub fn new() -> SessionList {
+//         let s_id_list = DashSet::new();
+//         let u_id_list = DashSet::new();
+
+//         SessionList {
+//             s_id_list,
+//             u_id_list,
+//         }
+//     }
+
+//     pub fn get(session_id: String) -> ObjectId {
+
+
+
+
+//     }
+
+//     pub fn insert(&self, session_id: String, user_id: ObjectId) -> Result<(), ApiError>{
+//         if self.u_id_list.insert(user_id, user) && self.s_id_list.insert(session_id) {
+//             Ok(())
+//         } else {
+//             Err(ApiError::ValidationError("Already logged in".into()))
+//         }
+//     }
+// }
+
+
 
 // i prefer not using actix test module, but i let that comment for notes
 // #[cfg(test)]

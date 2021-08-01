@@ -1,12 +1,13 @@
-use actix_web::{
-    dev::{Service, ServiceRequest, ServiceResponse, Transform},
-    web::Data,
-    Error, HttpMessage, HttpResponse,
-};
+use std::{pin::Pin, sync::RwLock};
+
+use actix_web::{Error, HttpMessage, HttpResponse, dev::{Service, ServiceRequest, ServiceResponse, Transform}, web::{self, Data}};
+use bimap::BiHashMap;
 use dashmap::DashMap;
-use futures::future::{self, Either, Ready};
+use futures::{Future, future::{self, Either, LocalBoxFuture, Ready}};
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
+// use tokio::sync::RwLock;
+
 
 use super::ApiError;
 
@@ -75,14 +76,20 @@ where
         self.service.poll_ready(ctx)
     }
 
-    //need to be refactor into something cleaner
     fn call(&mut self, req: Self::Request) -> Self::Future {
+
+        // let service = self.service.clone();
+        
+        
         match setup_session(&req) {
-            Ok(_) => Either::Left(self.service.call(req)),
+            Ok(_) => {
+                Either::Left(self.service.call(req))
+            },
             Err(err) => Either::Right(future::ok(
                 req.into_response(HttpResponse::from_error(err.into()).into_body()),
             )),
         }
+
     }
 }
 
@@ -91,20 +98,17 @@ fn setup_session(req: &ServiceRequest) -> Result<(), ApiError> {
         .cookie("session_id")
         .ok_or_else(|| ApiError::ValidationError("Cookie missing".into()))?;
 
-    //unrecoverable error -> ok to unwrap
     let session_list = req
-        .app_data::<Data<DashMap<String, ObjectId>>>()
+        .app_data::<Data<RwLock<BiHashMap<String, ObjectId>>>>()
         .ok_or_else(|| ApiError::InternalServerError("Session list missing".into()))?;
 
     let session_id = session_id.value();
 
-    let user_id = session_list
-        .get(session_id)
-        .as_deref()
-        .cloned()
-        .ok_or_else(|| ApiError::ValidationError("You are not logged in".into()))?;
-
-    let session = SessionInfo::new(session_id.to_string(), user_id);
+    let user_id = session_list.read().map_err(|err| ApiError::InternalServerError(err.to_string()))?;
+    let user_id = user_id.get_by_left(session_id).ok_or_else(|| ApiError::ValidationError("You are not logged in".into()))?;
+    
+    let session = SessionInfo::new(session_id.to_string(), user_id.clone());
+    
     req.extensions_mut().insert(session);
 
     Ok(())
