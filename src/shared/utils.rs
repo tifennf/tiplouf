@@ -24,7 +24,12 @@ pub fn validate_t_id(track_id: &str) -> Result<ObjectId, ApiError> {
 }
 
 pub fn extract_user_id(req: &HttpRequest) -> Result<ObjectId, ApiError> {
-    let user_id = req.extensions().get::<SessionInfo>().ok_or_else(|| ApiError::InternalServerError("Extension session is missing".into()))?.user_id.clone();
+    let user_id = req
+        .extensions()
+        .get::<SessionInfo>()
+        .ok_or_else(|| ApiError::InternalServerError("Extension session is missing".into()))?
+        .user_id
+        .clone();
 
     Ok(user_id)
 }
@@ -36,7 +41,7 @@ pub async fn create_p_list(
     let mut p_list = Vec::new();
     while let Some(playlist) = cursor.next().await {
         let playlist = bson::from_document::<Playlist>(playlist?)?;
-        let tracklist = track_manager.get_tracklist(playlist.id.clone()).await?;
+        let tracklist = track_manager.get_tracklist(playlist.p_id.clone()).await?;
 
         let playlist = playlist.into_json(tracklist);
 

@@ -10,13 +10,13 @@ pub struct PlaylistDraft {
 }
 
 impl PlaylistDraft {
-    pub fn into_json(self, tracklist: Vec<TrackJson>, id: &ObjectId) -> PlaylistJson {
-        let id = id.to_string();
+    pub fn into_json(self, tracklist: Vec<TrackJson>, p_id: &ObjectId) -> PlaylistJson {
+        let p_id = p_id.to_string();
 
         PlaylistJson {
             tracklist,
             tag: self.tag,
-            id,
+            p_id,
         }
     }
 }
@@ -31,7 +31,7 @@ struct TrackRef {
 pub struct Playlist {
     pub tag: Option<String>,
     #[serde(rename = "_id")]
-    pub id: ObjectId,
+    pub p_id: ObjectId,
 }
 
 impl Playlist {
@@ -39,7 +39,7 @@ impl Playlist {
         PlaylistJson {
             tracklist,
             tag: self.tag,
-            id: self.id.to_string(),
+            p_id: self.p_id.to_string(),
         }
     }
 }

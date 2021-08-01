@@ -88,23 +88,24 @@ where
 
 fn setup_session(req: &ServiceRequest) -> Result<(), ApiError> {
     let session_id = req
-            .cookie("session_id")
-            .ok_or_else(|| ApiError::ValidationError("Cookie missing".into()))?;
+        .cookie("session_id")
+        .ok_or_else(|| ApiError::ValidationError("Cookie missing".into()))?;
 
     //unrecoverable error -> ok to unwrap
     let session_list = req
-    .app_data::<Data<DashMap<String, ObjectId>>>().ok_or_else(|| ApiError::InternalServerError("Session list missing".into()))?;
+        .app_data::<Data<DashMap<String, ObjectId>>>()
+        .ok_or_else(|| ApiError::InternalServerError("Session list missing".into()))?;
 
     let session_id = session_id.value();
 
     let user_id = session_list
-    .get(session_id)
-    .as_deref()
-    .cloned()
-    .ok_or_else(|| ApiError::ValidationError("You are not logged in".into()))?;
+        .get(session_id)
+        .as_deref()
+        .cloned()
+        .ok_or_else(|| ApiError::ValidationError("You are not logged in".into()))?;
 
     let session = SessionInfo::new(session_id.to_string(), user_id);
     req.extensions_mut().insert(session);
-    
+
     Ok(())
 }

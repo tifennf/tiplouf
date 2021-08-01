@@ -7,9 +7,9 @@ use reqwest::header;
 use serde_json::Value;
 use std::collections::HashSet;
 
+use fake::{Dummy, Fake, Faker};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use fake::{Dummy, Fake, Faker};
 
 const IP: &str = "http://127.0.0.1:3000";
 
@@ -18,7 +18,6 @@ struct User {
     username: String,
     password: String,
 }
-
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 struct ApiResponse<T> {
@@ -30,13 +29,14 @@ struct ApiResponse<T> {
 struct Playlist {
     tracklist: Vec<Track>,
     tag: Option<String>,
-    id: String,
+    p_id: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 struct Track {
     url: String,
-    id: String,
+    p_id: String,
+    t_id: String,
 }
 
 fn tracklist_example() -> HashSet<String> {
@@ -57,10 +57,16 @@ fn playlist_example() -> Value {
     })
 }
 
-async fn post_one_playlist(client: &reqwest::Client, url: &str) -> Response {
+async fn post_one_playlist(client: &reqwest::Client, url: &str, session_id: &str) -> Response {
     let body = playlist_example();
 
-    client.post(url).json(&body).send().await.unwrap()
+    client
+        .post(url)
+        .header(header::COOKIE, session_id)
+        .json(&body)
+        .send()
+        .await
+        .unwrap()
 }
 
 async fn register_then_login(client: &reqwest::Client) -> String {
@@ -76,26 +82,40 @@ async fn register_then_login(client: &reqwest::Client) -> String {
 
     let res = client.post(url).json(&user).send().await.unwrap();
 
-    let session_id = res.cookies().reduce(|a, b| if a.name() == "session_id" { a } else { b }).unwrap();
-
+    let session_id = res
+        .cookies()
+        .reduce(|a, b| if a.name() == "session_id" { a } else { b })
+        .unwrap();
 
     let session_id = format!("{}={}", session_id.name(), session_id.value());
     println!("{}", session_id);
 
-
     session_id
 }
 
+////////////////////////
 
 #[tokio::test]
-async fn get_playlist() {
+async fn all_route() {
     let client = reqwest::Client::new();
-    
     let session_id = register_then_login(&client).await;
 
-    let url = format!("{}/playlist", IP);
+    get_playlist(&client, &session_id).await;
+    post_playlist(&client, &session_id).await;
+    get_one_playlist(&client, &session_id).await;
+    delete_playlist(&client, &session_id).await;
+    post_track(&client, &session_id).await;
+    delete_track(&client, &session_id).await;
+}
 
-    let res = client.get(url).header(header::COOKIE, session_id).send().await.unwrap();
+async fn get_playlist(client: &reqwest::Client, session_id: &str) {
+    let url = format!("{}/playlist", IP);
+    let res = client
+        .get(url)
+        .header(header::COOKIE, session_id)
+        .send()
+        .await
+        .unwrap();
 
     let status = res.status();
 
@@ -105,12 +125,9 @@ async fn get_playlist() {
     assert_eq!(playlist.status, "success");
 }
 
-#[tokio::test]
-async fn post_playlist() {
+async fn post_playlist(client: &reqwest::Client, session_id: &str) {
     let url = format!("{}/playlist", IP);
-    let client = reqwest::Client::new();
-
-    let res = post_one_playlist(&client, &url).await;
+    let res = post_one_playlist(client, &url, session_id).await;
 
     let status = res.status();
     let playlist = res.json::<ApiResponse<Playlist>>().await.unwrap();
@@ -119,21 +136,23 @@ async fn post_playlist() {
     assert_eq!(playlist.status, "success");
 }
 
-#[tokio::test]
-async fn get_one_playlist() {
+async fn get_one_playlist(client: &reqwest::Client, session_id: &str) {
     let url = format!("{}/playlist", IP);
-
-    let client = reqwest::Client::new();
-    let playlist1 = post_one_playlist(&client, &url)
+    let playlist1 = post_one_playlist(client, &url, session_id)
         .await
         .json::<ApiResponse<Playlist>>()
         .await
         .unwrap();
 
-    let id = &playlist1.data.id;
+    let id = &playlist1.data.p_id;
     let url = format!("{}/{}", url, id);
 
-    let res = client.get(url).send().await.unwrap();
+    let res = client
+        .get(url)
+        .header(header::COOKIE, session_id)
+        .send()
+        .await
+        .unwrap();
 
     let status = res.status();
 
@@ -144,21 +163,23 @@ async fn get_one_playlist() {
     assert_eq!(playlist1, playlist2);
 }
 
-#[tokio::test]
-async fn delete_playlist() {
+async fn delete_playlist(client: &reqwest::Client, session_id: &str) {
     let url = format!("{}/playlist", IP);
-
-    let client = reqwest::Client::new();
-    let playlist1 = post_one_playlist(&client, &url)
+    let playlist1 = post_one_playlist(client, &url, session_id)
         .await
         .json::<ApiResponse<Playlist>>()
         .await
         .unwrap();
 
-    let id = &playlist1.data.id;
+    let id = &playlist1.data.p_id;
     let url = format!("{}/{}", url, id);
 
-    let res = client.delete(url).send().await.unwrap();
+    let res = client
+        .delete(url)
+        .header(header::COOKIE, session_id)
+        .send()
+        .await
+        .unwrap();
 
     let status = res.status();
     let playlist2 = res.json::<ApiResponse<Playlist>>().await.unwrap();
@@ -168,23 +189,26 @@ async fn delete_playlist() {
     assert_eq!(playlist1, playlist2);
 }
 
-#[tokio::test]
-async fn post_track() {
+async fn post_track(client: &reqwest::Client, session_id: &str) {
     let url = format!("{}/playlist", IP);
-    let client = reqwest::Client::new();
-
-    let playlist1 = post_one_playlist(&client, &url)
+    let playlist1 = post_one_playlist(client, &url, session_id)
         .await
         .json::<ApiResponse<Playlist>>()
         .await
         .unwrap();
 
-    let id = &playlist1.data.id;
+    let id = &playlist1.data.p_id;
     let url = format!("{}/{}/track", url, id);
 
     let track = tracklist_example();
 
-    let res = client.post(url).json(&track).send().await.unwrap();
+    let res = client
+        .post(url)
+        .header(header::COOKIE, session_id)
+        .json(&track)
+        .send()
+        .await
+        .unwrap();
 
     let status = res.status();
     let playlist2 = res.json::<ApiResponse<Playlist>>().await.unwrap();
@@ -194,28 +218,31 @@ async fn post_track() {
     assert_ne!(playlist1, playlist2);
 }
 
-#[tokio::test]
-async fn delete_track() {
+async fn delete_track(client: &reqwest::Client, session_id: &str) {
     let url = format!("{}/playlist", IP);
-    let client = reqwest::Client::new();
-
-    let playlist1 = post_one_playlist(&client, &url)
+    let playlist1 = post_one_playlist(client, &url, session_id)
         .await
         .json::<ApiResponse<Playlist>>()
         .await
         .unwrap();
 
-    let p_id = &playlist1.data.id;
-    let url = format!("{}/{}/track", url, p_id);
+    let id = &playlist1.data.p_id;
+    let url = format!("{}/{}/track", url, id);
 
     let id_list = playlist1
         .data
         .tracklist
         .iter()
-        .map(|t| t.id.clone())
+        .map(|t| t.p_id.clone())
         .collect::<HashSet<String>>();
 
-    let res = client.delete(url).json(&id_list).send().await.unwrap();
+    let res = client
+        .delete(url)
+        .header(header::COOKIE, session_id)
+        .json(&id_list)
+        .send()
+        .await
+        .unwrap();
 
     let status = res.status();
     let playlist2 = res.json::<ApiResponse<Playlist>>().await.unwrap();

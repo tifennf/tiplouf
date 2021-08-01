@@ -13,12 +13,12 @@ impl TrackDraft {
         TrackDraft { url, p_id }
     }
 
-    pub fn into_json(self) -> TrackJson {
+    pub fn into_json(self, t_id: String) -> TrackJson {
         let p_id = self.p_id.to_string();
-
         TrackJson {
             url: self.url,
             p_id,
+            t_id,
         }
     }
 }
@@ -28,16 +28,18 @@ pub struct Track {
     pub url: String,
     pub p_id: ObjectId,
     #[serde(rename = "_id")]
-    pub id: ObjectId,
+    pub t_id: ObjectId,
 }
 
 impl Track {
     pub fn into_json(self) -> TrackJson {
         let p_id = self.p_id.to_string();
+        let t_id = self.t_id.to_string();
 
         TrackJson {
             url: self.url,
             p_id,
+            t_id,
         }
     }
 }

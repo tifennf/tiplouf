@@ -6,7 +6,10 @@ pub mod user;
 
 use actix_cors::Cors;
 use actix_files::Files;
-use actix_web::{App, HttpRequest, HttpServer, cookie::CookieJar, middleware::{Logger, NormalizePath}, web};
+use actix_web::{
+    middleware::{Logger, NormalizePath},
+    web, App, HttpServer,
+};
 use dashmap::DashMap;
 use mongodb::{bson::oid::ObjectId, Client};
 
@@ -73,5 +76,3 @@ pub async fn start(client: Client) -> std::io::Result<()> {
 //     }
 
 // }
-
-

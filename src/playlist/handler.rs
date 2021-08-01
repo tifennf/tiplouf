@@ -1,4 +1,4 @@
-use std::{collections::HashSet};
+use std::collections::HashSet;
 
 use crate::{
     playlist::{self, database::PlaylistManager},
@@ -15,10 +15,7 @@ use mongodb::Database;
 use super::schema::Info;
 
 //get /playlist/
-pub async fn get_all(
-    database: web::Data<Database>,
-    req: HttpRequest,
-) -> Result<HttpResponse> {
+pub async fn get_all(database: web::Data<Database>, req: HttpRequest) -> Result<HttpResponse> {
     let user_id = utils::extract_user_id(&req)?;
 
     let manager = PlaylistManager::new(&database);
@@ -50,7 +47,7 @@ pub async fn get_one(
     let manager = PlaylistManager::new(&database);
     let playlist = manager.get_one(user_id, p_id).await?;
 
-    Ok(ApiResponse::success(Some(playlist), StatusCode::OK))
+    Ok(ApiResponse::success(playlist, StatusCode::OK))
 }
 
 //post /playlist/
@@ -61,12 +58,12 @@ pub async fn create_one(
 ) -> Result<HttpResponse> {
     let user_id = utils::extract_user_id(&req)?;
     let playlist = body.0;
-    
+
     let manager = PlaylistManager::new(&database);
-    
+
     let playlist = manager.add_one(user_id, playlist).await?;
-    
-    Ok(ApiResponse::success(Some(playlist), StatusCode::CREATED))
+
+    Ok(ApiResponse::success(playlist, StatusCode::CREATED))
 }
 
 //delete /playlist/{id}
@@ -77,10 +74,10 @@ pub async fn delete_one(
 ) -> Result<HttpResponse, ApiError> {
     let user_id = utils::extract_user_id(&req)?;
     let p_id = utils::validate_p_id(&p_id)?;
-    
+
     let manager = PlaylistManager::new(&database);
     let playlist = manager.remove_one(user_id, p_id).await?;
-    
+
     Ok(ApiResponse::success(Some(playlist), StatusCode::ACCEPTED))
 }
 
@@ -102,7 +99,7 @@ pub async fn tracklist_add(
 
     let playlist = manager.add_track(user_id, p_id, tracklist).await?;
 
-    Ok(ApiResponse::success(Some(playlist), StatusCode::CREATED))
+    Ok(ApiResponse::success(playlist, StatusCode::CREATED))
 }
 pub async fn tracklist_remove(
     database: web::Data<Database>,
@@ -117,5 +114,5 @@ pub async fn tracklist_remove(
 
     let playlist = manager.remove_track(user_id, p_id, id_list).await?;
 
-    Ok(ApiResponse::success(Some(playlist), StatusCode::ACCEPTED))
+    Ok(ApiResponse::success(playlist, StatusCode::ACCEPTED))
 }

@@ -20,25 +20,37 @@ impl TrackManager {
         TrackManager { collection }
     }
 
-    pub async fn get_one(&self, id: ObjectId) -> Result<Option<TrackJson>, ApiError> {
-        let track = self.collection.find_one(doc! {"_id": id}, None).await?;
+    // pub async fn get_one(&self, id: ObjectId) -> Result<Option<TrackJson>, ApiError> {
+    //     let track = self.collection.find_one(doc! {"_id": id}, None).await?;
 
-        track
-            .map(|track| Ok(bson::from_document::<Track>(track)?.into_json()))
-            .transpose()
-    }
+    //     track
+    //         .map(|track| Ok(bson::from_document::<Track>(track)?.into_json()))
+    //         .transpose()
+    // }
 
-    pub async fn add_one(&self, track: TrackDraft) -> Result<Option<TrackJson>, ApiError> {
-        let doc = bson::to_document(&track)?;
-        let _result = self.collection.insert_one(doc, None).await?;
+    // pub async fn add_one(&self, track: TrackDraft) -> Result<TrackJson, ApiError> {
+    //     let doc = bson::to_document(&track)?;
+    //     let result = self.collection.insert_one(doc, None).await?;
 
-        Ok(Some(track.into_json()))
-    }
+    //     let t_id = result
+    //         .inserted_id
+    //         .as_object_id()
+    //         .ok_or_else(|| ApiError::DatabaseError("Id not generated".into()))?
+    //         .to_string();
 
-    pub async fn remove_one(&self, id: ObjectId) -> Result<Option<TrackJson>, ApiError> {
+    //     Ok(track.into_json(t_id))
+    // }
+
+    pub async fn remove_one(&self, p_id: ObjectId, t_id: ObjectId) -> Result<Option<TrackJson>, ApiError> {
+
+        let filter = doc! {
+            "p_id": p_id,
+            "_id": t_id,
+        };
+
         let track = self
             .collection
-            .find_one_and_delete(doc! { "_id": id }, None)
+            .find_one_and_delete(filter, None)
             .await?;
 
         track
@@ -81,9 +93,9 @@ impl TrackManager {
             .into_iter()
             .zip(id_list.values())
             .map(|(track, id)| {
-                let _id = id.as_object_id()?.to_string();
+                let t_id = id.as_object_id()?.to_string();
 
-                Some(track.into_json())
+                Some(track.into_json(t_id))
             })
             .collect::<Option<Vec<TrackJson>>>()
             .ok_or_else(ApiError::id_not_generate)?;
@@ -102,13 +114,21 @@ impl TrackManager {
     pub async fn add_many_track(
         &self,
         tracklist: Vec<TrackDraft>,
-    ) -> Result<InsertManyResult, ApiError> {
+    ) -> Result<Vec<ObjectId>, ApiError> {
         let tracklist = tracklist
             .iter()
             .map(|track| Ok(bson::to_document(track)?))
             .collect::<Result<Vec<Document>, ApiError>>()?;
-        let result = self.collection.insert_many(tracklist, None).await?;
+        let result = self
+            .collection
+            .insert_many(tracklist, None)
+            .await?
+            .inserted_ids;
 
-        Ok(result)
+        result
+            .values()
+            .map(|t_id| t_id.as_object_id().cloned())
+            .collect::<Option<Vec<ObjectId>>>()
+            .ok_or_else(|| ApiError::DatabaseError("Id not generated".into()))
     }
 }

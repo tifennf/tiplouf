@@ -14,7 +14,10 @@ pub struct PlaylistRequest {
 
 impl PlaylistRequest {
     pub fn into_draft(self, user_id: ObjectId) -> (HashSet<String>, PlaylistDraft) {
-        let draft = PlaylistDraft { tag: self.tag, user_id };
+        let draft = PlaylistDraft {
+            tag: self.tag,
+            user_id,
+        };
 
         (self.tracklist, draft)
     }
@@ -24,7 +27,7 @@ impl PlaylistRequest {
 pub struct PlaylistJson {
     pub tracklist: Vec<TrackJson>,
     pub tag: Option<String>,
-    pub id: String,
+    pub p_id: String,
 }
 
 #[derive(Deserialize)]

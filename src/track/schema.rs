@@ -21,5 +21,5 @@ impl TrackRequest {
 pub struct TrackJson {
     pub url: String,
     pub p_id: String,
+    pub t_id: String,
 }
-
