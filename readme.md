@@ -22,8 +22,8 @@ First, you need to register then login, then add the session_id cookie to all yo
 
 | Method | Path      | Body example | Description |
 |--------|-----------|-----------|-----------|
-| POST   | /auth/register | { "username": "xxxx", "password": "yyyyy" } | Get all your playlist |
-| POST   | /auth/login   | { "username": "xxxx", "password": "yyyyy" } | Get all your playlist with this tag |
+| POST   | /auth/register | { "username": "xxxx", "password": "yyyyy" } | Register an user |
+| POST   | /auth/login   | { "username": "xxxx", "password": "yyyyy" } | Login with user infos |
 
 
 
