@@ -101,6 +101,7 @@ async fn all_route() {
     let session_id = register_then_login(&client).await;
 
     get_playlist(&client, &session_id).await;
+    get_playlist_by_tag(&client, &session_id).await;
     post_playlist(&client, &session_id).await;
     get_one_playlist(&client, &session_id).await;
     delete_playlist(&client, &session_id).await;
@@ -109,7 +110,34 @@ async fn all_route() {
 }
 
 async fn get_playlist(client: &reqwest::Client, session_id: &str) {
+
+    for _ in 0..5 {
+        post_playlist(&client, session_id).await;
+    }
+
     let url = format!("{}/playlist", IP);
+    let res = client
+        .get(url)
+        .header(header::COOKIE, session_id)
+        .send()
+        .await
+        .unwrap();
+
+    let status = res.status();
+
+    let playlist = res.json::<ApiResponse<Vec<Playlist>>>().await.unwrap();
+
+    assert!(status.is_success());
+    assert_eq!(playlist.status, "success");
+}
+
+async fn get_playlist_by_tag(client: &reqwest::Client, session_id: &str) {
+
+    for _ in 0..5 {
+        post_playlist(&client, session_id).await;
+    }
+
+    let url = format!("{}/playlist?tag=classique", IP);
     let res = client
         .get(url)
         .header(header::COOKIE, session_id)

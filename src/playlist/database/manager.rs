@@ -151,12 +151,13 @@ impl PlaylistManager {
         self.get_one(user_id, p_id).await
     }
 
-    pub async fn get_tag(&self, tag: String) -> Result<Vec<PlaylistJson>, ApiError> {
+    pub async fn get_tag(&self, user_id: ObjectId, tag: String) -> Result<Vec<PlaylistJson>, ApiError> {
         let filter = doc! {
-            "tag": tag
+            "tag": tag,
+            "user_id": user_id,
         };
-        let options = FindOptions::builder().limit(50).build();
-        let mut cursor = self.collection.find(filter, options).await?;
+        // let options = FindOptions::builder().limit(50).build();
+        let mut cursor = self.collection.find(filter, None).await?;
 
         utils::create_p_list(&self.track_manager, &mut cursor).await
     }

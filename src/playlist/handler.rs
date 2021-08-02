@@ -26,13 +26,15 @@ pub async fn get_all(database: web::Data<Database>, req: HttpRequest) -> Result<
 
 pub async fn tag_get_all(
     database: web::Data<Database>,
+    req: HttpRequest,
     query: Query<Info>,
 ) -> Result<HttpResponse> {
+    let user_id = utils::extract_user_id(&req)?;
+    
     let manager = PlaylistManager::new(&database);
+    let p_list = manager.get_tag(user_id, query.tag.clone()).await?;
 
-    let p_list = manager.get_tag(query.tag.clone()).await?;
-
-    Ok(ApiResponse::success(Some(p_list), StatusCode::OK))
+    Ok(ApiResponse::success(p_list, StatusCode::OK))
 }
 
 //get /playlist/{id}
@@ -78,7 +80,7 @@ pub async fn delete_one(
     let manager = PlaylistManager::new(&database);
     let playlist = manager.remove_one(user_id, p_id).await?;
 
-    Ok(ApiResponse::success(Some(playlist), StatusCode::ACCEPTED))
+    Ok(ApiResponse::success(playlist, StatusCode::ACCEPTED))
 }
 
 pub async fn tracklist_add(

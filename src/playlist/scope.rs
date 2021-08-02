@@ -12,6 +12,7 @@ pub fn scope(cfg: &mut web::ServiceConfig) {
     cfg.service(
         web::resource("")
             .route(web::get().to(handler::get_all))
+            .route(web::get().to(handler::tag_get_all))
             .route(web::post().to(handler::create_one)),
     );
 
