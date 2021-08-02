@@ -3,7 +3,7 @@ use mongodb::{
     Collection, Database,
 };
 
-use crate::shared::{ApiError, Ressource};
+use crate::shared::{ApiError, Ressource, error::DatabaseError};
 
 use super::document::{User, UserDraft, UserQuery};
 
@@ -63,7 +63,7 @@ impl UserManager {
         let id = result
             .inserted_id
             .as_object_id()
-            .ok_or_else(|| ApiError::DatabaseError("Id not generated".into()))?;
+            .ok_or_else(|| ApiError::DatabaseError(DatabaseError::IdGeneration))?;
         let user = user.add_id(id.clone());
 
         Ok(user)

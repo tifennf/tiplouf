@@ -1,9 +1,9 @@
-use std::{fmt::Debug, io};
+use std::{fmt::Debug, io, sync::PoisonError};
 
 use super::ApiResponse;
 use actix_web::http::StatusCode;
 use derive_more::Display;
-use log::error;
+use log::{error, info};
 use serde::Serialize;
 
 #[derive(Debug, Display, Serialize)]
@@ -19,13 +19,13 @@ pub enum Ressource {
 #[derive(Debug, Display, Serialize, Clone)]
 pub enum ApiError {
     #[display(fmt = "Validation error: {}", self.0)]
-    ValidationError(String),
+    ValidationError(ValidationError),
     #[display(fmt = "Query error on ressource: {}", self.0)]
     QueryError(Ressource),
     #[display(fmt = "Internal server error: {}", self.0)]
-    InternalServerError(String),
+    InternalServerError(InternalServerError),
     #[display(fmt = "Mongodb error: {}", self.0)]
-    DatabaseError(String),
+    DatabaseError(DatabaseError),
 }
 
 impl ApiError {
@@ -78,23 +78,62 @@ impl actix_web::error::ResponseError for ApiError {
 
 impl From<mongodb::error::Error> for ApiError {
     fn from(err: mongodb::error::Error) -> Self {
-        ApiError::DatabaseError(err.to_string())
+        info!("{}", err);
+        ApiError::DatabaseError(DatabaseError::MongoDb(err.to_string()))
     }
 }
 
 impl From<mongodb::bson::de::Error> for ApiError {
     fn from(err: mongodb::bson::de::Error) -> Self {
-        ApiError::InternalServerError(err.to_string())
+        info!("{}", err);
+        ApiError::InternalServerError(InternalServerError::Other(err.to_string()))
     }
 }
 impl From<mongodb::bson::ser::Error> for ApiError {
     fn from(err: mongodb::bson::ser::Error) -> Self {
-        ApiError::InternalServerError(err.to_string())
+        info!("{}", err);
+        ApiError::InternalServerError(InternalServerError::Other(err.to_string()))
     }
 }
 
 impl From<bcrypt::BcryptError> for ApiError {
     fn from(err: bcrypt::BcryptError) -> Self {
-        ApiError::InternalServerError(err.to_string())
+        info!("{}", err);
+        ApiError::InternalServerError(InternalServerError::Other(err.to_string()))
     }
+}
+
+
+#[derive(Debug, Display, Serialize, Clone)]
+pub enum ValidationError {
+    #[display(fmt = "Invalid playlist id")]
+    PlaylistId,
+    #[display(fmt = "Invalid track id")]
+    TrackId,
+    #[display(fmt = "You are not logged in")]
+    NotLogged,
+    #[display(fmt = "Cookie is missing")]
+    CookieMissing,
+    #[display(fmt = "Username or password does not match, try again")]
+    UserIdentifier,
+    #[display(fmt = "Username already taken")]
+    UsernameTaken,
+}
+
+#[derive(Debug, Display, Serialize, Clone)]
+pub enum InternalServerError {
+    #[display(fmt = "Extension session is missing")]
+    ExtensionMissing,
+    #[display(fmt = "Extension session is missing")]
+    SessionListMissing,
+    #[display(fmt = "Other: {}", self.0)]
+    Other(String),
+}
+
+#[derive(Debug, Display, Serialize, Clone)]
+pub enum DatabaseError {
+    #[display(fmt = "Mongodb: {}", self.0)]
+    MongoDb(String),
+    #[display(fmt = "Id not generated")]
+    IdGeneration,
 }

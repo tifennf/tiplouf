@@ -10,24 +10,24 @@ use mongodb::{
     Cursor,
 };
 
-use super::middleware::SessionInfo;
+use super::{error::{InternalServerError, ValidationError}, middleware::SessionInfo};
 
 pub fn validate_p_id(p_id: &str) -> Result<ObjectId, ApiError> {
     ObjectId::with_string(p_id)
-        .map_err(|_| ApiError::ValidationError(playlist::error::Playlist::InvalidId.to_string()))
+        .map_err(|_| ApiError::ValidationError(ValidationError::PlaylistId))
 }
 
 pub fn validate_t_id(track_id: &str) -> Result<ObjectId, ApiError> {
-    ObjectId::with_string(track_id).map_err(|_| {
-        ApiError::ValidationError(playlist::error::Playlist::TrackInvalidId.to_string())
-    })
+    ObjectId::with_string(track_id).map_err(|_| 
+        ApiError::ValidationError(ValidationError::TrackId)
+    )
 }
 
 pub fn extract_user_id(req: &HttpRequest) -> Result<ObjectId, ApiError> {
     let user_id = req
         .extensions()
         .get::<SessionInfo>()
-        .ok_or_else(|| ApiError::InternalServerError("Extension session is missing".into()))?
+        .ok_or_else(|| ApiError::InternalServerError(InternalServerError::ExtensionMissing))?
         .user_id
         .clone();
 

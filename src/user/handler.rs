@@ -11,7 +11,7 @@ use bimap::BiHashMap;
 use mongodb::{bson::oid::ObjectId, Database};
 // use tokio::sync::RwLock;
 
-use crate::{shared::{ApiError, ApiResponse, ApiSuccess}, user::database::{document::UserQuery, manager::UserManager}};
+use crate::{shared::{ApiError, ApiResponse, ApiSuccess, error::{InternalServerError, ValidationError}}, user::database::{document::UserQuery, manager::UserManager}};
 
 use super::{database::document::UserDraft, schema::UserRequest};
 
@@ -29,7 +29,7 @@ pub async fn register(
     let username_taken = manager.is_already_taken(user.username.clone()).await?;
 
     if username_taken {
-        Err(ApiError::ValidationError("Username already taken".into()).into())
+        Err(ApiError::ValidationError(ValidationError::UsernameTaken).into())
     } else {
         manager.add_one(user).await?;
 
@@ -50,18 +50,18 @@ pub async fn login(
     let user = manager.get_one(UserQuery::Username(user.username)).await?;
 
     let password_match = verify(submit_password, &user.password)
-        .map_err(|err| ApiError::InternalServerError(err.to_string()))?;
+        .map_err(|err| ApiError::InternalServerError(InternalServerError::Other(err.to_string())))?;
 
     if !password_match {
         return Err(ApiError::ValidationError(
-            "Username or password does not match, try again".into(),
+            ValidationError::UserIdentifier,
         )
         .into());
     }
 
     let session_id = nanoid!();
 
-    let mut guard = session_list.write().map_err(|err| ApiError::InternalServerError(err.to_string()))?;
+    let mut guard = session_list.write().map_err(|err| ApiError::InternalServerError(InternalServerError::Other(err.to_string())))?;
 
     guard.insert(session_id.clone(), user.id);
 

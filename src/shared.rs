@@ -1,4 +1,4 @@
-mod error;
+pub mod error;
 pub mod middleware;
 mod responder;
 pub mod utils;

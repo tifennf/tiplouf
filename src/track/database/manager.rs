@@ -1,11 +1,10 @@
 use futures::TryStreamExt;
 use mongodb::{
     bson::{self, doc, oid::ObjectId, Document},
-    results::InsertManyResult,
     Collection, Database,
 };
 
-use crate::{shared::ApiError, track::schema::TrackJson};
+use crate::{shared::{ApiError, error::DatabaseError}, track::schema::TrackJson};
 
 use super::{document::TrackDraft, Track};
 
@@ -129,6 +128,6 @@ impl TrackManager {
             .values()
             .map(|t_id| t_id.as_object_id().cloned())
             .collect::<Option<Vec<ObjectId>>>()
-            .ok_or_else(|| ApiError::DatabaseError("Id not generated".into()))
+            .ok_or_else(|| ApiError::DatabaseError(DatabaseError::IdGeneration))
     }
 }

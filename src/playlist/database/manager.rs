@@ -7,7 +7,7 @@ use mongodb::{
     Collection, Database,
 };
 
-use crate::shared::utils;
+use crate::shared::{Ressource, error::ValidationError, utils};
 use crate::track::database::TrackDraft;
 use crate::track::TrackManager;
 use crate::{playlist::PlaylistRequest, track::TrackJson};
@@ -57,7 +57,7 @@ impl PlaylistManager {
         let tracklist = self.track_manager.get_tracklist(p_id).await?;
 
         playlist
-            .ok_or_else(|| ApiError::ValidationError("Could not find playlist, invalid ID".into()))
+            .ok_or_else(|| ApiError::ValidationError(ValidationError::PlaylistId))
             .and_then(|playlist| {
                 Ok::<PlaylistJson, ApiError>(
                     bson::from_document::<Playlist>(playlist)?.into_json(tracklist),
@@ -106,7 +106,7 @@ impl PlaylistManager {
             .collection
             .find_one_and_delete(filter, None)
             .await?
-            .ok_or_else(|| ApiError::DatabaseError("Could not find deleted playlist".into()))?;
+            .ok_or_else(|| ApiError::QueryError(Ressource::Playlist))?;
         let tracklist = self.track_manager.remove_tracklist(p_id.clone()).await?;
 
         let playlist = bson::from_document::<Playlist>(playlist)?.into_json(tracklist);
