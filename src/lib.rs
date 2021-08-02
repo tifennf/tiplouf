@@ -7,7 +7,7 @@ pub mod user;
 use std::sync::RwLock;
 
 use actix_cors::Cors;
-use actix_files::Files;
+// use actix_files::Files;
 use actix_web::{
     middleware::{Logger, NormalizePath},
     web, App, HttpServer,
@@ -33,7 +33,7 @@ pub async fn start(client: Client) -> std::io::Result<()> {
             .data(client.clone().database(DB))
             .app_data(session_list.clone())
             .configure(route::config)
-            .service(Files::new("/", "./public/root/").index_file("index.html"))
+            // .service(Files::new("/", "./public/root/").index_file("index.html"))
     })
     .bind(ADDR)?
     .run()
