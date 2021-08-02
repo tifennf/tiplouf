@@ -17,7 +17,7 @@ First run the api + mongod, then you can run the "all_route" test with ```cargo 
 
 ### Routes
 
-First, you need to register then login, then add the sessionm_id cookie to all your requests on /playlist
+First, you need to register then login, then add the session_id cookie to all your requests on /playlist
 
 | Method | Path      | Body example | Description |
 |--------|-----------|-----------|-----------|
