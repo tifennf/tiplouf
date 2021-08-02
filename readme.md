@@ -4,6 +4,7 @@ That is a playlist manager api to be used with a frontend
 
 To run the api, start mongod service, then ```cargo run --release``` ( install rust <https://www.rust-lang.org/tools/install> )
 
+Api server port: 0.0.0.0:3000
 
 
 ## Information
