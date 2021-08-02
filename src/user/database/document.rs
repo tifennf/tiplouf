@@ -1,8 +1,6 @@
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 
-use crate::user::schema::UserJson;
-
 pub enum UserQuery {
     Id(ObjectId),
     Username(String),
@@ -33,14 +31,3 @@ pub struct User {
     pub id: ObjectId,
 }
 
-impl Into<UserJson> for User {
-    fn into(self) -> UserJson {
-        let id = self.id.to_string();
-
-        UserJson {
-            username: self.username,
-            password: self.password,
-            id,
-        }
-    }
-}

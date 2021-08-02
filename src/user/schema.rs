@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::shared::ApiError;
 
-use super::database::document::UserDraft;
+use super::database::document::{User, UserDraft};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct UserRequest {
@@ -42,4 +42,16 @@ pub struct UserJson {
     pub username: String,
     pub password: String,
     pub id: String,
+}
+
+impl From<User> for UserJson {
+    fn from(user: User) -> Self {
+        let id = user.id.to_string();
+
+        UserJson {
+            username: user.username,
+            password: user.password,
+            id,
+        }
+    }
 }

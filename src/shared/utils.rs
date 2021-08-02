@@ -27,7 +27,7 @@ pub fn extract_user_id(req: &HttpRequest) -> Result<ObjectId, ApiError> {
     let user_id = req
         .extensions()
         .get::<SessionInfo>()
-        .ok_or_else(|| ApiError::InternalServerError(InternalServerError::ExtensionMissing))?
+        .ok_or(ApiError::InternalServerError(InternalServerError::ExtensionMissing))?
         .user_id
         .clone();
 

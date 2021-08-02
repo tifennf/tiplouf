@@ -128,6 +128,6 @@ impl TrackManager {
             .values()
             .map(|t_id| t_id.as_object_id().cloned())
             .collect::<Option<Vec<ObjectId>>>()
-            .ok_or_else(|| ApiError::DatabaseError(DatabaseError::IdGeneration))
+            .ok_or(ApiError::DatabaseError(DatabaseError::IdGeneration))
     }
 }

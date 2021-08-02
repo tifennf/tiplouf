@@ -36,7 +36,7 @@ impl UserManager {
             .collection
             .find_one(filter, None)
             .await?
-            .ok_or_else(|| ApiError::QueryError(Ressource::User))?;
+            .ok_or(ApiError::QueryError(Ressource::User))?;
 
         Ok(bson::from_document::<User>(user)?)
     }
@@ -48,12 +48,7 @@ impl UserManager {
 
         let user = self.collection.find_one(filter, None).await?;
 
-        let result = match user {
-            Some(_) => true,
-            None => false,
-        };
-
-        Ok(result)
+        Ok(user.is_some())
     }
 
     pub async fn add_one(&self, user: UserDraft) -> Result<User, ApiError> {
@@ -63,7 +58,7 @@ impl UserManager {
         let id = result
             .inserted_id
             .as_object_id()
-            .ok_or_else(|| ApiError::DatabaseError(DatabaseError::IdGeneration))?;
+            .ok_or(ApiError::DatabaseError(DatabaseError::IdGeneration))?;
         let user = user.add_id(id.clone());
 
         Ok(user)
@@ -78,7 +73,7 @@ impl UserManager {
             .collection
             .find_one_and_delete(filter, None)
             .await?
-            .ok_or_else(|| ApiError::QueryError(Ressource::User))?;
+            .ok_or(ApiError::QueryError(Ressource::User))?;
 
         Ok(bson::from_document::<User>(user)?)
     }

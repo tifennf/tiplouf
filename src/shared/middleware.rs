@@ -91,16 +91,16 @@ where
 fn setup_session(req: &ServiceRequest) -> Result<(), ApiError> {
     let session_id = req
         .cookie("session_id")
-        .ok_or_else(|| ApiError::ValidationError(ValidationError::CookieMissing))?;
+        .ok_or(ApiError::ValidationError(ValidationError::CookieMissing))?;
 
     let session_list = req
         .app_data::<Data<RwLock<BiHashMap<String, ObjectId>>>>()
-        .ok_or_else(|| ApiError::InternalServerError(InternalServerError::SessionListMissing))?;
+        .ok_or(ApiError::InternalServerError(InternalServerError::SessionListMissing))?;
 
     let session_id = session_id.value();
 
     let user_id = session_list.read().map_err(|err| ApiError::InternalServerError(InternalServerError::Other(err.to_string())))?;
-    let user_id = user_id.get_by_left(session_id).ok_or_else(|| ApiError::ValidationError(ValidationError::NotLogged))?;
+    let user_id = user_id.get_by_left(session_id).ok_or(ApiError::ValidationError(ValidationError::NotLogged))?;
     
     let session = SessionInfo::new(session_id.to_string(), user_id.clone());
     

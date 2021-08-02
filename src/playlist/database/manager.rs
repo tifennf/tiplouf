@@ -32,7 +32,6 @@ impl PlaylistManager {
         }
     }
 
-    //need fix about cursor
     pub async fn get_all(&self, user_id: ObjectId) -> Result<Vec<PlaylistJson>, ApiError> {
         let filter = doc! {
             "user_id": user_id,
@@ -57,7 +56,7 @@ impl PlaylistManager {
         let tracklist = self.track_manager.get_tracklist(p_id).await?;
 
         playlist
-            .ok_or_else(|| ApiError::ValidationError(ValidationError::PlaylistId))
+            .ok_or(ApiError::ValidationError(ValidationError::PlaylistId))
             .and_then(|playlist| {
                 Ok::<PlaylistJson, ApiError>(
                     bson::from_document::<Playlist>(playlist)?.into_json(tracklist),
@@ -106,7 +105,7 @@ impl PlaylistManager {
             .collection
             .find_one_and_delete(filter, None)
             .await?
-            .ok_or_else(|| ApiError::QueryError(Ressource::Playlist))?;
+            .ok_or(ApiError::QueryError(Ressource::Playlist))?;
         let tracklist = self.track_manager.remove_tracklist(p_id.clone()).await?;
 
         let playlist = bson::from_document::<Playlist>(playlist)?.into_json(tracklist);
