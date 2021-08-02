@@ -1,6 +1,6 @@
-use std::{pin::Pin, sync::RwLock};
+use std::{sync::RwLock};
 
-use actix_web::{Error, HttpMessage, HttpResponse, dev::{Service, ServiceRequest, ServiceResponse, Transform}, web::{self, Data}};
+use actix_web::{Error, HttpMessage, HttpResponse, dev::{Service, ServiceRequest, ServiceResponse, Transform}, web::{Data}};
 use bimap::BiHashMap;
 use futures::future::{self, Either, Ready};
 use mongodb::bson::oid::ObjectId;

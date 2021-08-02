@@ -1,5 +1,5 @@
 use crate::{
-    playlist::{self, database::Playlist, schema::PlaylistJson},
+    playlist::{database::Playlist, schema::PlaylistJson},
     shared::ApiError,
     track::TrackManager,
 };

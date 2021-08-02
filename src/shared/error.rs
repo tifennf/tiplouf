@@ -1,4 +1,4 @@
-use std::{fmt::Debug, io, sync::PoisonError};
+use std::{fmt::Debug, io};
 
 use super::ApiResponse;
 use actix_web::http::StatusCode;
