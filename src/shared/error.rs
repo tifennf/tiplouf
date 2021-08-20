@@ -6,7 +6,7 @@ use derive_more::Display;
 use log::{error, info};
 use serde::Serialize;
 
-#[derive(Debug, Display, Serialize)]
+#[derive(Debug, Display, Serialize, Clone)]
 pub enum Ressource {
     #[display(fmt = "Playlist")]
     Playlist,
@@ -37,15 +37,6 @@ impl ApiError {
 impl std::error::Error for Ressource {}
 impl std::error::Error for ApiError {}
 
-impl Clone for Ressource {
-    fn clone(&self) -> Self {
-        match self {
-            Ressource::Playlist => Ressource::Playlist,
-            Ressource::Track => Ressource::Track,
-            Ressource::User => Ressource::User,
-        }
-    }
-}
 
 impl actix_web::error::ResponseError for ApiError {
     fn error_response(&self) -> actix_web::HttpResponse {
