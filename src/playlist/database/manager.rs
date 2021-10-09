@@ -3,11 +3,10 @@ use std::collections::HashSet;
 // use futures::StreamExt;
 use mongodb::{
     bson::{self, doc, oid::ObjectId},
-    options::FindOptions,
     Collection, Database,
 };
 
-use crate::shared::{Ressource, error::ValidationError, utils};
+use crate::shared::{error::ValidationError, utils, Ressource};
 use crate::track::database::TrackDraft;
 use crate::track::TrackManager;
 use crate::{playlist::PlaylistRequest, track::TrackJson};
@@ -132,7 +131,6 @@ impl PlaylistManager {
         Ok(playlist)
     }
 
-
     //need update with delete many
     pub async fn remove_track(
         &self,
@@ -145,13 +143,19 @@ impl PlaylistManager {
         for t_id in t_id_list {
             let t_id = utils::validate_t_id(&t_id)?;
 
-            self.track_manager.remove_one(p_id.clone(), t_id.clone()).await?;
+            self.track_manager
+                .remove_one(p_id.clone(), t_id.clone())
+                .await?;
         }
 
         self.get_one(user_id, p_id).await
     }
 
-    pub async fn get_tag(&self, user_id: ObjectId, tag: String) -> Result<Vec<PlaylistJson>, ApiError> {
+    pub async fn get_tag(
+        &self,
+        user_id: ObjectId,
+        tag: String,
+    ) -> Result<Vec<PlaylistJson>, ApiError> {
         let filter = doc! {
             "tag": tag,
             "user_id": user_id,

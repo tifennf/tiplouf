@@ -1,13 +1,19 @@
-use std::{sync::RwLock};
+use std::sync::RwLock;
 
-use actix_web::{Error, HttpMessage, HttpResponse, dev::{Service, ServiceRequest, ServiceResponse, Transform}, web::{Data}};
+use actix_web::{
+    dev::{Service, ServiceRequest, ServiceResponse, Transform},
+    web::Data,
+    Error, HttpMessage, HttpResponse,
+};
 use bimap::BiHashMap;
 use futures::future::{self, Either, Ready};
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 
-
-use super::{ApiError, error::{InternalServerError, ValidationError}};
+use super::{
+    error::{InternalServerError, ValidationError},
+    ApiError,
+};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SessionInfo {
@@ -75,16 +81,13 @@ where
     }
 
     //todo: find a way to use async for tokio RwLock
-    fn call(&mut self, req: Self::Request) -> Self::Future {    
+    fn call(&mut self, req: Self::Request) -> Self::Future {
         match setup_session(&req) {
-            Ok(_) => {
-                Either::Left(self.service.call(req))
-            },
+            Ok(_) => Either::Left(self.service.call(req)),
             Err(err) => Either::Right(future::ok(
                 req.into_response(HttpResponse::from_error(err.into()).into_body()),
             )),
         }
-
     }
 }
 
@@ -95,15 +98,21 @@ fn setup_session(req: &ServiceRequest) -> Result<(), ApiError> {
 
     let session_list = req
         .app_data::<Data<RwLock<BiHashMap<String, ObjectId>>>>()
-        .ok_or(ApiError::InternalServerError(InternalServerError::SessionListMissing))?;
+        .ok_or(ApiError::InternalServerError(
+            InternalServerError::SessionListMissing,
+        ))?;
 
     let session_id = session_id.value();
 
-    let user_id = session_list.read().map_err(|err| ApiError::InternalServerError(InternalServerError::Other(err.to_string())))?;
-    let user_id = user_id.get_by_left(session_id).ok_or(ApiError::ValidationError(ValidationError::NotLogged))?;
-    
+    let user_id = session_list.read().map_err(|err| {
+        ApiError::InternalServerError(InternalServerError::Other(err.to_string()))
+    })?;
+    let user_id = user_id
+        .get_by_left(session_id)
+        .ok_or(ApiError::ValidationError(ValidationError::NotLogged))?;
+
     let session = SessionInfo::new(session_id.to_string(), user_id.clone());
-    
+
     req.extensions_mut().insert(session);
 
     Ok(())

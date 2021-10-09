@@ -13,17 +13,6 @@ pub struct UserRequest {
     pub password: String,
 }
 
-// impl UserRequest {
-//     fn into_draft(self) -> Result<UserDraft, ApiError> {
-//         let password = hash(self.password, DEFAULT_COST)?;
-
-//         Ok(UserDraft {
-//             username: self.username,
-//             password,
-//         })
-//     }
-// }
-
 impl TryInto<UserDraft> for UserRequest {
     type Error = ApiError;
 
@@ -54,4 +43,9 @@ impl From<User> for UserJson {
             id,
         }
     }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SessionCheck {
+    pub session_id: String,
 }

@@ -3,7 +3,7 @@ use mongodb::{
     Collection, Database,
 };
 
-use crate::shared::{ApiError, Ressource, error::DatabaseError};
+use crate::shared::{error::DatabaseError, ApiError, Ressource};
 
 use super::document::{User, UserDraft, UserQuery};
 

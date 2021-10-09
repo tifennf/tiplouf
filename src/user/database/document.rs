@@ -30,4 +30,3 @@ pub struct User {
     #[serde(rename = "_id")]
     pub id: ObjectId,
 }
-

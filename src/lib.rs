@@ -15,13 +15,13 @@ use actix_web::{
 use bimap::BiMap;
 use mongodb::{bson::oid::ObjectId, Client};
 
-const ADDR: &str = "localhost:3000";
+const ADDR: &str = "0.0.0.0:5000";
 const DB: &str = "tiplouf";
 
 pub async fn start(client: Client) -> std::io::Result<()> {
     let session_list = RwLock::new(BiMap::<String, ObjectId>::new());
     let session_list = web::Data::new(session_list);
-    println!("Server running on port 3000");
+    println!("Server running on localhost 3000");
 
     HttpServer::new(move || {
         let cors = Cors::permissive();
@@ -33,7 +33,7 @@ pub async fn start(client: Client) -> std::io::Result<()> {
             .data(client.clone().database(DB))
             .app_data(session_list.clone())
             .configure(route::config)
-            // .service(Files::new("/", "./public/root/").index_file("index.html"))
+        // .service(Files::new("/", "./public/root/").index_file("index.html"))
     })
     .bind(ADDR)?
     .run()

@@ -37,7 +37,6 @@ impl ApiError {
 impl std::error::Error for Ressource {}
 impl std::error::Error for ApiError {}
 
-
 impl actix_web::error::ResponseError for ApiError {
     fn error_response(&self) -> actix_web::HttpResponse {
         // let data = self.clone();
@@ -93,7 +92,6 @@ impl From<bcrypt::BcryptError> for ApiError {
         ApiError::InternalServerError(InternalServerError::Other(err.to_string()))
     }
 }
-
 
 #[derive(Debug, Display, Serialize, Clone)]
 pub enum ValidationError {

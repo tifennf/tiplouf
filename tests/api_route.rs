@@ -110,7 +110,6 @@ async fn all_route() {
 }
 
 async fn get_playlist(client: &reqwest::Client, session_id: &str) {
-
     for _ in 0..5 {
         post_playlist(&client, session_id).await;
     }
@@ -132,7 +131,6 @@ async fn get_playlist(client: &reqwest::Client, session_id: &str) {
 }
 
 async fn get_playlist_by_tag(client: &reqwest::Client, session_id: &str) {
-
     for _ in 0..5 {
         post_playlist(&client, session_id).await;
     }
@@ -255,7 +253,6 @@ async fn delete_track(client: &reqwest::Client, session_id: &str) {
         .unwrap();
 
     let id = &playlist1.data.p_id;
-
 
     let url = format!("{}/{}/track", url, id);
 

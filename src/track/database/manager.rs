@@ -4,7 +4,10 @@ use mongodb::{
     Collection, Database,
 };
 
-use crate::{shared::{ApiError, error::DatabaseError}, track::schema::TrackJson};
+use crate::{
+    shared::{error::DatabaseError, ApiError},
+    track::schema::TrackJson,
+};
 
 use super::{document::TrackDraft, Track};
 
@@ -40,17 +43,17 @@ impl TrackManager {
     //     Ok(track.into_json(t_id))
     // }
 
-    pub async fn remove_one(&self, p_id: ObjectId, t_id: ObjectId) -> Result<Option<TrackJson>, ApiError> {
-
+    pub async fn remove_one(
+        &self,
+        p_id: ObjectId,
+        t_id: ObjectId,
+    ) -> Result<Option<TrackJson>, ApiError> {
         let filter = doc! {
             "p_id": p_id,
             "_id": t_id,
         };
 
-        let track = self
-            .collection
-            .find_one_and_delete(filter, None)
-            .await?;
+        let track = self.collection.find_one_and_delete(filter, None).await?;
 
         track
             .map(|track| Ok(bson::from_document::<Track>(track)?.into_json()))

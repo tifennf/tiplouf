@@ -30,7 +30,7 @@ pub async fn tag_get_all(
     query: Query<Info>,
 ) -> Result<HttpResponse> {
     let user_id = utils::extract_user_id(&req)?;
-    
+
     let manager = PlaylistManager::new(&database);
     let p_list = manager.get_tag(user_id, query.tag.clone()).await?;
 
